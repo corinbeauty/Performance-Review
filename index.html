@@ -6,6 +6,7 @@
   <title>不老松中清店 員工評核</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -261,9 +262,10 @@
       </div>
       <div class="p-6 space-y-4">
         <input type="hidden" id="user-form-mode" value="add">
+        <input type="hidden" id="user-form-old-id" value="">
         <div>
           <label class="block text-sm font-medium mb-1">員工編號 (ID)</label>
-          <input type="text" id="user-form-id" placeholder="例如: E011" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 disabled:opacity-50">
+          <input type="text" id="user-form-id" placeholder="例如: E011" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">員工姓名</label>
@@ -1016,11 +1018,10 @@
         const badgeClass = ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700';
 
         html += `
-          <div class="p-3 sm:p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between transition-colors ${activeCls} gap-3 sm:gap-0">
+          <div class="user-list-item p-3 sm:p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between transition-colors ${activeCls} gap-3 sm:gap-0" data-id="${u.id}">
             <div class="flex items-center gap-3 w-full sm:w-auto">
-              <div class="flex flex-col gap-1 mr-2">
-                <button class="btn-move-up p-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed" data-index="${index}" ${index === 0 ? 'disabled' : ''}><i class="ph ph-caret-up font-bold"></i></button>
-                <button class="btn-move-down p-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed" data-index="${index}" ${index === state.users.length - 1 ? 'disabled' : ''}><i class="ph ph-caret-down font-bold"></i></button>
+              <div class="drag-handle cursor-grab active:cursor-grabbing p-1 sm:p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 touch-none">
+                <i class="ph ph-dots-six-vertical text-2xl"></i>
               </div>
               <div>
                 <div class="flex items-center gap-2 mb-1">
@@ -1041,6 +1042,31 @@
       });
       list.innerHTML = html;
 
+      // Init SortableJS for drag-and-drop
+      if (window.adminUsersSortable) {
+        window.adminUsersSortable.destroy();
+      }
+      window.adminUsersSortable = new Sortable(list, {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'opacity-50',
+        onEnd: async function (evt) {
+          if (evt.oldIndex === evt.newIndex) return;
+          const items = Array.from(list.querySelectorAll('.user-list-item'));
+          const batch = writeBatch(db);
+          items.forEach((item, index) => {
+            const userId = item.dataset.id;
+            const newOrder = (index + 1) * 10;
+            batch.update(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', userId), { order: newOrder });
+          });
+          try {
+            await batch.commit();
+          } catch(err) {
+            showMsg("錯誤", "順序更新失敗，請檢查權限");
+          }
+        }
+      });
+
       // Event Bindings for Admin List
       document.querySelectorAll('.btn-toggle-user').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -1058,22 +1084,16 @@
       document.querySelectorAll('.btn-edit-user').forEach(btn => {
         btn.addEventListener('click', (e) => { openUserForm('edit', e.currentTarget.dataset.id); });
       });
-      document.querySelectorAll('.btn-move-up').forEach(btn => {
-        btn.addEventListener('click', (e) => { handleReorder(parseInt(e.currentTarget.dataset.index), -1); });
-      });
-      document.querySelectorAll('.btn-move-down').forEach(btn => {
-        btn.addEventListener('click', (e) => { handleReorder(parseInt(e.currentTarget.dataset.index), 1); });
-      });
     }
 
     // --- User Adding / Editing / Reordering ---
     function openUserForm(mode, userId = null) {
       document.getElementById('user-form-mode').value = mode;
+      document.getElementById('user-form-old-id').value = userId || '';
       
       if (mode === 'add') {
         document.getElementById('user-form-title').textContent = "新增員工";
         document.getElementById('user-form-id').value = "";
-        document.getElementById('user-form-id').disabled = false;
         document.getElementById('user-form-name').value = "";
         document.getElementById('user-form-role').value = "櫃台員工";
       } else {
@@ -1081,7 +1101,6 @@
         if (!u) return;
         document.getElementById('user-form-title').textContent = "編輯員工";
         document.getElementById('user-form-id').value = u.id;
-        document.getElementById('user-form-id').disabled = true;
         document.getElementById('user-form-name').value = u.name;
         document.getElementById('user-form-role').value = u.role;
       }
@@ -1090,6 +1109,7 @@
 
     async function handleSaveUserForm() {
       const mode = document.getElementById('user-form-mode').value;
+      const oldId = document.getElementById('user-form-old-id').value;
       const id = document.getElementById('user-form-id').value.trim();
       const name = document.getElementById('user-form-name').value.trim();
       const role = document.getElementById('user-form-role').value;
@@ -1106,34 +1126,25 @@
           await setDoc(uRef, { id, name, role, active: true, order: newOrder });
           showMsg("成功", "已成功新增員工！");
         } else {
-          await updateDoc(uRef, { name, role });
+          if (id !== oldId) {
+            // 檢查新ID是否已存在
+            const snap = await getDoc(uRef);
+            if(snap.exists()) return showMsg("錯誤", "此新員編已存在，無法更改至該編號！");
+            
+            // 複製資料到新ID，刪除舊ID
+            const oldUser = state.users.find(u => u.id === oldId);
+            const batch = writeBatch(db);
+            batch.set(uRef, { id, name, role, active: oldUser.active, order: oldUser.order });
+            batch.delete(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', oldId));
+            await batch.commit();
+          } else {
+            await updateDoc(uRef, { name, role });
+          }
           showMsg("成功", "員工資料更新成功！");
         }
         document.getElementById('modal-user-form').classList.add('hidden');
       } catch(err) { 
         showMsg("錯誤", "儲存失敗，請檢查權限設定"); 
-      }
-    }
-
-    async function handleReorder(index, direction) {
-      const targetIndex = index + direction;
-      if (targetIndex < 0 || targetIndex >= state.users.length) return;
-      
-      let currentItem = state.users[index];
-      let swapItem = state.users[targetIndex];
-      
-      // Keep fallback just in case order is undefined
-      let currentOrder = currentItem.order || (index * 10);
-      let swapOrder = swapItem.order || (targetIndex * 10);
-
-      try {
-        // Swap their order values in Firestore
-        const batch = writeBatch(db);
-        batch.update(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', currentItem.id), { order: swapOrder });
-        batch.update(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', swapItem.id), { order: currentOrder });
-        await batch.commit();
-      } catch (err) {
-        showMsg("錯誤", "順序調整失敗");
       }
     }
 
