@@ -270,13 +270,13 @@
 
     // --- Configuration & Data ---
     const firebaseConfig = {
-      apiKey: "AIzaSyBfS9CJMmhQfFkNB3mwco5apc9rDpp3ipw",
-      authDomain: "e-training-a6d4c.firebaseapp.com",
-      projectId: "e-training-a6d4c",
-      storageBucket: "e-training-a6d4c.firebasestorage.app",
-      messagingSenderId: "96150516095",
-      appId: "1:96150516095:web:750f1f466560642ec92a4a",
-      measurementId: "G-VB3WWZ8PYL"
+      apiKey: "AIzaSyACBeyjI_5qQ_UDygYQVPZ1PhA1Byjs7gw",
+      authDomain: "performance-review-3fb28.firebaseapp.com",
+      projectId: "performance-review-3fb28",
+      storageBucket: "performance-review-3fb28.firebasestorage.app",
+      messagingSenderId: "353081675040",
+      appId: "1:353081675040:web:0451e1455e48c4bd42db45",
+      measurementId: "G-M7XNX00SK3"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -440,11 +440,8 @@
 
       // Firebase Auth
       try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
+        // 使用您專屬的 Firebase，直接採用匿名登入
+        await signInAnonymously(auth);
       } catch (err) {
         console.error("Auth Error:", err);
         showMsg("錯誤", "資料庫連線失敗，請重整網頁。");
