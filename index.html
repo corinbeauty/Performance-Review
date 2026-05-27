@@ -15,7 +15,7 @@
     }
   </script>
   <style>
-    /* Custom Scrollbar hiding for tabs */
+    /* Custom Scrollbar */
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
@@ -24,6 +24,8 @@
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .slide-up { animation: slideUp 0.3s ease-out; }
     @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
   </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300 font-sans text-gray-900 dark:text-gray-100 min-h-screen">
@@ -77,16 +79,18 @@
         <h2 class="text-lg font-bold mb-4 border-b pb-2 border-gray-100 dark:border-gray-700">第一步：身分確認</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium mb-2">請選擇您的姓名</label>
-            <select id="user-select" class="w-full p-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 disabled:opacity-50">
-              <option value="">-- 點擊選擇 --</option>
-            </select>
+            <label class="block text-sm font-medium mb-2">請選擇您的姓名與職務</label>
+            <!-- Custom Styled Select Trigger -->
+            <div id="custom-user-select-trigger" class="w-full p-4 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 cursor-pointer flex justify-between items-center transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+              <span id="custom-user-select-text" class="text-gray-500 font-medium">-- 點擊選擇人員 --</span>
+              <i class="ph ph-caret-down text-gray-400"></i>
+            </div>
           </div>
           <div id="user-info-display" class="flex flex-col justify-end hidden">
             <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 rounded-xl flex items-center gap-4">
               <div id="user-avatar" class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-sm"></div>
               <div>
-                <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">評核人員</p>
+                <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">目前評核人員</p>
                 <p class="font-bold text-lg"><span id="user-name-display"></span> <span class="text-sm font-normal text-gray-500" id="user-id-display"></span></p>
               </div>
             </div>
@@ -165,13 +169,16 @@
 
       <!-- Users Tab -->
       <div id="admin-users-section" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700 fade-in">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl font-bold">員工名單管理</h2>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div>
+            <h2 class="text-xl font-bold">員工名單管理</h2>
+            <p class="text-sm text-gray-500 mt-1">您可以利用上下箭頭調整前台顯示順序</p>
+          </div>
           <button id="btn-add-user-modal" class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors">
             <i class="ph ph-user-plus"></i> 新增員工
           </button>
         </div>
-        <div id="admin-users-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div id="admin-users-list" class="flex flex-col gap-3">
           <!-- Rendered via JS -->
         </div>
       </div>
@@ -180,6 +187,20 @@
   </main>
 
   <!-- === MODALS === -->
+
+  <!-- Custom User Select Modal (Rich Colors & Hierarchy) -->
+  <div id="modal-custom-user-select" class="fixed inset-0 z-[70] hidden flex flex-col justify-end sm:justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm fade-in">
+    <div class="bg-white dark:bg-gray-800 sm:rounded-2xl rounded-t-2xl shadow-2xl w-full max-w-md mx-auto overflow-hidden flex flex-col h-[70vh] sm:h-auto sm:max-h-[80vh] slide-up">
+      <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+        <h3 class="text-lg font-bold">選擇評核人員</h3>
+        <button class="close-modal text-gray-400 hover:text-gray-600 bg-gray-200 dark:bg-gray-700 p-1.5 rounded-full"><i class="ph ph-x text-lg"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-2" id="custom-user-list-container">
+        <!-- Rendered via JS (Sorted and colored) -->
+      </div>
+    </div>
+  </div>
+
   <!-- Admin Login Modal -->
   <div id="modal-login" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
@@ -199,13 +220,13 @@
   </div>
 
   <!-- Message Modal -->
-  <div id="modal-msg" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+  <div id="modal-msg" class="fixed inset-0 z-[90] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
       <div class="p-6 border-b border-gray-100 dark:border-gray-700">
         <h3 class="text-xl font-bold" id="msg-title">訊息</h3>
       </div>
       <div class="p-6">
-        <p class="text-lg" id="msg-content"></p>
+        <p class="text-lg whitespace-pre-line" id="msg-content"></p>
       </div>
       <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-end">
         <button id="btn-msg-ok" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">了解</button>
@@ -214,15 +235,15 @@
   </div>
 
   <!-- Delete Confirm Modal -->
-  <div id="modal-delete" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+  <div id="modal-delete" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
       <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-        <h3 class="text-xl font-bold">確認刪除員工</h3>
+        <h3 class="text-xl font-bold text-red-600">確認刪除員工</h3>
         <button class="close-modal text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
       </div>
       <div class="p-6">
         <p>確定要永久刪除此員工資料嗎？</p>
-        <p class="text-sm text-red-500 mt-2">* 注意：刪除後將無法以該員編登入，但不會影響過去已送出的評核紀錄。若只是暫時離職，建議使用「隱藏」功能即可。</p>
+        <p class="text-sm text-red-500 mt-2">* 注意：刪除後將無法以該員編登入，若只是暫時離職建議使用「隱藏」。</p>
       </div>
       <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
         <button class="close-modal px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700">取消</button>
@@ -231,36 +252,37 @@
     </div>
   </div>
 
-  <!-- Add User Modal -->
-  <div id="modal-add-user" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+  <!-- Add/Edit User Modal -->
+  <div id="modal-user-form" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
       <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-        <h3 class="text-xl font-bold">新增員工</h3>
+        <h3 class="text-xl font-bold" id="user-form-title">新增員工</h3>
         <button class="close-modal text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
       </div>
       <div class="p-6 space-y-4">
+        <input type="hidden" id="user-form-mode" value="add">
         <div>
           <label class="block text-sm font-medium mb-1">員工編號 (ID)</label>
-          <input type="text" id="new-user-id" placeholder="例如: E011" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
+          <input type="text" id="user-form-id" placeholder="例如: E011" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 disabled:opacity-50">
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">員工姓名</label>
-          <input type="text" id="new-user-name" placeholder="請輸入姓名" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
+          <input type="text" id="user-form-name" placeholder="請輸入姓名" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">選擇職務</label>
-          <select id="new-user-role" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
-            <option value="櫃台員工">櫃台員工</option>
-            <option value="中繼員工">中繼員工</option>
-            <option value="櫃台主任">櫃台主任</option>
-            <option value="中繼主任">中繼主任</option>
+          <select id="user-form-role" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
             <option value="店長">店長</option>
+            <option value="櫃台主任">櫃台主任</option>
+            <option value="櫃台員工">櫃台員工</option>
+            <option value="中繼主任">中繼主任</option>
+            <option value="中繼員工">中繼員工</option>
           </select>
         </div>
       </div>
       <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
         <button class="close-modal px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700">取消</button>
-        <button id="btn-add-user-confirm" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">儲存新增</button>
+        <button id="btn-user-form-confirm" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">儲存</button>
       </div>
     </div>
   </div>
@@ -307,10 +329,22 @@
     </div>
   </div>
 
+  <!-- BEAUTIFUL SUCCESS MODAL -->
+  <div id="modal-success" class="fixed inset-0 z-[90] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm fade-in">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-8 border border-green-100 dark:border-green-900 pop-in">
+      <div class="w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+        <i class="ph ph-check-circle text-6xl text-green-500"></i>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">送出成功！</h3>
+      <p class="text-gray-500 dark:text-gray-400 mb-8">您的本月評核已成功寫入系統，感謝您的填寫。</p>
+      <button id="btn-success-ok" class="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-lg shadow-lg transition-colors">確認完成</button>
+    </div>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDocs, getDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, getDoc, onSnapshot, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     // --- Configuration & Data ---
     const firebaseConfig = {
@@ -328,26 +362,36 @@
     const db = getFirestore(app);
     const APP_ID = typeof __app_id !== 'undefined' ? __app_id : "bulaosong-zhongqing-v1";
 
+    // Update Initial Users with generic order (10, 20, 30...)
     const initialUsers = [
-      { id: 'E001', name: '黃詩涵', role: '櫃台員工', active: true },
-      { id: 'E002', name: '劉芸汝', role: '櫃台主任', active: true },
-      { id: 'E003', name: '賴彥廷', role: '櫃台員工', active: true },
-      { id: 'E004', name: '黃靖雯', role: '櫃台員工', active: true },
-      { id: 'E005', name: '莊秉豐', role: '櫃台員工', active: true },
-      { id: 'E006', name: '呂佳霖', role: '櫃台主任', active: true },
-      { id: 'M001', name: '賴信吉', role: '店長', active: true },
-      { id: 'E007', name: '柏政權', role: '櫃台員工', active: true },
-      { id: 'E008', name: '王楷翔', role: '櫃台主任', active: true },
-      { id: 'E009', name: '施孟均', role: '櫃台員工', active: true },
-      { id: 'R001', name: '黃淑惠', role: '中繼員工', active: true },
-      { id: 'R002', name: '李采蓁', role: '中繼主任', active: true },
-      { id: 'R003', name: '范秀慈', role: '中繼員工', active: true },
-      { id: 'R004', name: '陳素珍', role: '中繼員工', active: true },
-      { id: 'R005', name: '李佳貝', role: '中繼員工', active: true },
-      { id: 'E010', name: '陳秀如', role: '櫃台主任', active: true }
+      { id: 'M001', name: '賴信吉', role: '店長', active: true, order: 10 },
+      { id: 'E002', name: '劉芸汝', role: '櫃台主任', active: true, order: 20 },
+      { id: 'E006', name: '呂佳霖', role: '櫃台主任', active: true, order: 30 },
+      { id: 'E008', name: '王楷翔', role: '櫃台主任', active: true, order: 40 },
+      { id: 'E010', name: '陳秀如', role: '櫃台主任', active: true, order: 50 },
+      { id: 'E001', name: '黃詩涵', role: '櫃台員工', active: true, order: 60 },
+      { id: 'E003', name: '賴彥廷', role: '櫃台員工', active: true, order: 70 },
+      { id: 'E004', name: '黃靖雯', role: '櫃台員工', active: true, order: 80 },
+      { id: 'E005', name: '莊秉豐', role: '櫃台員工', active: true, order: 90 },
+      { id: 'E007', name: '柏政權', role: '櫃台員工', active: true, order: 100 },
+      { id: 'E009', name: '施孟均', role: '櫃台員工', active: true, order: 110 },
+      { id: 'R002', name: '李采蓁', role: '中繼主任', active: true, order: 120 },
+      { id: 'R001', name: '黃淑惠', role: '中繼員工', active: true, order: 130 },
+      { id: 'R003', name: '范秀慈', role: '中繼員工', active: true, order: 140 },
+      { id: 'R004', name: '陳素珍', role: '中繼員工', active: true, order: 150 },
+      { id: 'R005', name: '李佳貝', role: '中繼員工', active: true, order: 160 }
     ];
 
     const ROLES = ['櫃台員工', '中繼員工', '櫃台主任', '中繼主任'];
+
+    // Role Colors Definition for Badge UI
+    const ROLE_COLORS = {
+      '店長': 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+      '櫃台主任': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+      '櫃台員工': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
+      '中繼主任': 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200 dark:border-orange-800',
+      '中繼員工': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+    };
 
     const questionsData = {
       '櫃台員工': [
@@ -426,7 +470,8 @@
       themeBtn: document.getElementById('btn-theme'),
       testModeBtn: document.getElementById('btn-test-mode'),
       adminToggleBtn: document.getElementById('btn-admin-toggle'),
-      userSelect: document.getElementById('user-select'),
+      customUserTrigger: document.getElementById('custom-user-select-trigger'),
+      customUserText: document.getElementById('custom-user-select-text'),
       questionsList: document.getElementById('questions-list'),
       sigTrigger: document.getElementById('signature-trigger'),
       sigDisplay: document.getElementById('sig-display'),
@@ -453,7 +498,7 @@
       els.themeBtn.addEventListener('click', toggleTheme);
       els.testModeBtn.addEventListener('click', () => { state.testMode = !state.testMode; updateUI(); });
       els.adminToggleBtn.addEventListener('click', toggleAdminMode);
-      els.userSelect.addEventListener('change', handleUserSelect);
+      els.customUserTrigger.addEventListener('click', openCustomUserSelector);
       els.clearSigBtn.addEventListener('click', clearSignature);
       els.submitBtn.addEventListener('click', handleSubmit);
       els.sigTrigger.addEventListener('click', openSignatureModal);
@@ -473,13 +518,10 @@
       document.getElementById('admin-password').addEventListener('keydown', (e) => e.key === 'Enter' && confirmLogin());
       document.getElementById('btn-msg-ok').addEventListener('click', () => document.getElementById('modal-msg').classList.add('hidden'));
       document.getElementById('btn-delete-confirm').addEventListener('click', handleDeleteUser);
-      document.getElementById('btn-add-user-modal').addEventListener('click', () => {
-        document.getElementById('new-user-id').value = '';
-        document.getElementById('new-user-name').value = '';
-        document.getElementById('new-user-role').value = '櫃台員工';
-        document.getElementById('modal-add-user').classList.remove('hidden');
-      });
-      document.getElementById('btn-add-user-confirm').addEventListener('click', handleAddUser);
+      
+      // User Form (Add/Edit)
+      document.getElementById('btn-add-user-modal').addEventListener('click', () => openUserForm('add'));
+      document.getElementById('btn-user-form-confirm').addEventListener('click', handleSaveUserForm);
 
       // Signature & Submit Modals
       document.getElementById('btn-modal-cancel-sig').addEventListener('click', () => {
@@ -488,10 +530,14 @@
       document.getElementById('btn-modal-clear-sig').addEventListener('click', clearModalSignature);
       document.getElementById('btn-modal-confirm-sig').addEventListener('click', saveModalSignature);
       document.getElementById('btn-final-submit').addEventListener('click', executeFinalSubmit);
+      
+      // Success Modal
+      document.getElementById('btn-success-ok').addEventListener('click', () => {
+        document.getElementById('modal-success').classList.add('hidden');
+      });
 
       // Firebase Auth
       try {
-        // 使用您專屬的 Firebase，直接採用匿名登入
         await signInAnonymously(auth);
       } catch (err) {
         console.error("Auth Error:", err);
@@ -512,21 +558,12 @@
     function updateUI() {
       const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
       
-      // Test Mode Button
-      if (state.testMode) {
-        els.testModeBtn.className = "text-xs px-2 py-1 rounded border bg-red-100 text-red-600 border-red-300";
-      } else {
-        els.testModeBtn.className = "text-xs px-2 py-1 rounded border text-gray-400 border-gray-200 dark:border-gray-700";
-      }
+      if (state.testMode) els.testModeBtn.className = "text-xs px-2 py-1 rounded border bg-red-100 text-red-600 border-red-300";
+      else els.testModeBtn.className = "text-xs px-2 py-1 rounded border text-gray-400 border-gray-200 dark:border-gray-700";
 
-      // Status Banner
-      if (!isSubmissionPeriod && !state.isAdminMode) {
-        document.getElementById('status-banner').classList.remove('hidden');
-      } else {
-        document.getElementById('status-banner').classList.add('hidden');
-      }
+      if (!isSubmissionPeriod && !state.isAdminMode) document.getElementById('status-banner').classList.remove('hidden');
+      else document.getElementById('status-banner').classList.add('hidden');
 
-      // Main Views Toggle
       if (state.isAdminMode) {
         document.getElementById('user-view').classList.add('hidden');
         document.getElementById('admin-view').classList.remove('hidden');
@@ -543,20 +580,66 @@
     }
 
     // --- User Logic ---
-    function renderUserView(isSubmissionPeriod) {
-      // User Select options
+    function openCustomUserSelector() {
+      const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
+      if(!isSubmissionPeriod) {
+        return showMsg("提醒", "目前非評核開放時間 (每月 20~25 號)。\n※ 若需測試，請點擊右上角的「Test Mode」。");
+      }
+      
+      const container = document.getElementById('custom-user-list-container');
+      let html = '';
       const activeUsers = state.users.filter(u => u.active);
-      const currVal = els.userSelect.value;
       
-      let optsHtml = '<option value="">-- 點擊選擇 --</option>';
-      activeUsers.forEach(u => {
-        optsHtml += `<option value="${u.id}" ${u.id === currVal ? 'selected' : ''}>${u.name} (${u.role})</option>`;
-      });
-      els.userSelect.innerHTML = optsHtml;
-      els.userSelect.disabled = !isSubmissionPeriod;
+      if(activeUsers.length === 0) {
+         html = '<p class="text-gray-500 text-center p-4">目前沒有可選擇的人員</p>';
+      } else {
+         activeUsers.forEach(u => {
+           const badgeClass = ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700';
+           html += `
+             <div class="user-select-item p-3 mb-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center transition-colors" data-id="${u.id}">
+               <div>
+                 <span class="font-bold text-gray-900 dark:text-white text-lg">${u.name}</span>
+                 <span class="text-xs text-gray-400 ml-2">${u.id}</span>
+               </div>
+               <span class="px-2.5 py-1 rounded-md text-xs font-bold border ${badgeClass}">${u.role}</span>
+             </div>
+           `;
+         });
+      }
+      
+      container.innerHTML = html;
+      document.getElementById('modal-custom-user-select').classList.remove('hidden');
 
-      const userObj = state.users.find(u => u.id === state.selectedUserId);
+      // Bind Clicks
+      document.querySelectorAll('.user-select-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          const id = e.currentTarget.dataset.id;
+          handleUserSelect(id);
+          document.getElementById('modal-custom-user-select').classList.add('hidden');
+        });
+      });
+    }
+
+    function handleUserSelect(userId) {
+      state.selectedUserId = userId;
+      const user = state.users.find(u => u.id === userId);
+      if (user) {
+        state.currentTab = user.role;
+        els.customUserText.innerHTML = `<span class="font-bold text-gray-900 dark:text-white">${user.name}</span> <span class="px-2 py-0.5 rounded text-xs ml-2 ${ROLE_COLORS[user.role]||''} border">${user.role}</span>`;
+        els.customUserText.classList.remove('text-gray-500');
+      } else {
+        els.customUserText.innerHTML = '-- 點擊選擇人員 --';
+        els.customUserText.classList.add('text-gray-500');
+      }
       
+      state.answers = {};
+      state.supplements = {};
+      clearSignature();
+      updateUI();
+    }
+
+    function renderUserView(isSubmissionPeriod) {
+      const userObj = state.users.find(u => u.id === state.selectedUserId);
       if (userObj) {
         document.getElementById('user-info-display').classList.remove('hidden');
         document.getElementById('user-avatar').textContent = userObj.name[0];
@@ -570,13 +653,10 @@
         renderQuestions(isSubmissionPeriod);
         
         if (!isSubmissionPeriod) {
-          document.getElementById('sig-placeholder').textContent = "目前未開放填寫";
-          els.submitBtn.disabled = true;
+          document.getElementById('sig-placeholder').innerHTML = `<i class="ph ph-warning-circle text-xl mr-2"></i> 目前未開放填寫`;
         } else {
-          document.getElementById('sig-placeholder').textContent = state.signatureData ? "" : "請在此區域簽名";
-          els.submitBtn.disabled = false;
+          document.getElementById('sig-placeholder').innerHTML = state.signatureData ? "" : `<i class="ph ph-pencil-simple text-xl mr-2"></i> 點擊此處開啟簽名板`;
         }
-
       } else {
         document.getElementById('user-info-display').classList.add('hidden');
         document.getElementById('questionnaire-container').classList.add('hidden');
@@ -626,7 +706,6 @@
           html += `</div>`;
         }
 
-        // Supplement Box
         const ans = state.answers[q.id];
         const showSupp = q.requireSupplementIf && ((Array.isArray(ans) && ans.some(a=>q.requireSupplementIf.includes(a))) || q.requireSupplementIf.includes(ans));
         
@@ -644,7 +723,6 @@
 
       els.questionsList.innerHTML = html;
 
-      // Attach events
       document.querySelectorAll('.q-input').forEach(el => {
         el.addEventListener('change', (e) => {
           const qId = e.target.dataset.qid;
@@ -659,35 +737,17 @@
           } else {
             state.answers[qId] = val;
           }
-          renderQuestions(isSubmissionPeriod); // Re-render to show/hide supplements and update active classes
+          renderQuestions(isSubmissionPeriod);
         });
       });
 
-      // Handle number inputs (on input instead of change)
       document.querySelectorAll('.q-input[type="number"]').forEach(el => {
-        el.addEventListener('input', (e) => {
-           state.answers[e.target.dataset.qid] = e.target.value;
-        });
+        el.addEventListener('input', (e) => { state.answers[e.target.dataset.qid] = e.target.value; });
       });
 
       document.querySelectorAll('.q-supp').forEach(el => {
-        el.addEventListener('input', (e) => {
-          state.supplements[e.target.dataset.qid] = e.target.value;
-        });
+        el.addEventListener('input', (e) => { state.supplements[e.target.dataset.qid] = e.target.value; });
       });
-    }
-
-    function handleUserSelect(e) {
-      const userId = e.target.value;
-      state.selectedUserId = userId;
-      const user = state.users.find(u => u.id === userId);
-      if (user) state.currentTab = user.role;
-      
-      // Reset forms
-      state.answers = {};
-      state.supplements = {};
-      clearSignature();
-      updateUI();
     }
 
     // --- Signature Pad Logic ---
@@ -696,7 +756,9 @@
     
     function openSignatureModal() {
       const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
-      if(!isSubmissionPeriod) return;
+      if(!isSubmissionPeriod) {
+         return showMsg("提醒", "目前非評核開放時間 (每月 20~25 號)。\n※ 若需測試，請點擊右上角的「Test Mode」。");
+      }
 
       document.getElementById('modal-signature').classList.remove('hidden');
       
@@ -710,7 +772,7 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.lineWidth = 4;
-      ctx.strokeStyle = '#000000'; // 固定為黑色，因簽名底色固定為亮色
+      ctx.strokeStyle = '#000000';
 
       isDrawing = false;
       
@@ -740,44 +802,18 @@
       return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
-    function startDrawing(e) {
-      e.preventDefault();
-      const coords = getCoords(e);
-      ctx.beginPath();
-      ctx.moveTo(coords.x, coords.y);
-      isDrawing = true;
-    }
-
-    function draw(e) {
-      if (!isDrawing) return;
-      e.preventDefault();
-      const coords = getCoords(e);
-      ctx.lineTo(coords.x, coords.y);
-      ctx.stroke();
-    }
-
-    function stopDrawing() {
-      if (isDrawing) {
-        isDrawing = false;
-      }
-    }
-
-    function clearModalSignature() {
-      const canvas = document.getElementById('modal-sig-canvas');
-      ctx.clearRect(0, 0, canvas.width / (window.devicePixelRatio||1), canvas.height / (window.devicePixelRatio||1));
-    }
-
+    function startDrawing(e) { e.preventDefault(); const coords = getCoords(e); ctx.beginPath(); ctx.moveTo(coords.x, coords.y); isDrawing = true; }
+    function draw(e) { if (!isDrawing) return; e.preventDefault(); const coords = getCoords(e); ctx.lineTo(coords.x, coords.y); ctx.stroke(); }
+    function stopDrawing() { if (isDrawing) isDrawing = false; }
+    function clearModalSignature() { const canvas = document.getElementById('modal-sig-canvas'); ctx.clearRect(0, 0, canvas.width / (window.devicePixelRatio||1), canvas.height / (window.devicePixelRatio||1)); }
     function saveModalSignature() {
       const canvas = document.getElementById('modal-sig-canvas');
       state.signatureData = canvas.toDataURL('image/png');
-      
       els.sigDisplay.src = state.signatureData;
       els.sigDisplay.classList.remove('hidden');
       document.getElementById('sig-placeholder').classList.add('hidden');
-      
       document.getElementById('modal-signature').classList.add('hidden');
     }
-
     function clearSignature() {
       state.signatureData = null;
       if(els.sigDisplay) {
@@ -792,14 +828,13 @@
       const usersRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'users');
       onSnapshot(usersRef, (snapshot) => {
         if (snapshot.empty) {
-          // Sync hardcoded defaults
           initialUsers.forEach(async (u) => {
             await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id), u);
           });
         } else {
+          // SORT BY ORDER field during fetch
           const loadedUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-          state.users = loadedUsers;
-          
+          state.users = loadedUsers.sort((a, b) => (a.order || 999) - (b.order || 999));
           updateUI();
         }
       }, (err) => console.error(err));
@@ -814,33 +849,25 @@
           .filter(d => d.month === selectedAdminMonth)
           .sort((a,b) => new Date(b.submitDate) - new Date(a.submitDate));
         renderAdminRecords();
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     }
 
     async function handleSubmit() {
+      const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
+      if (!isSubmissionPeriod) return showMsg("提醒", "目前非評核開放時間 (每月 20~25 號)。\n※ 若需測試，請點擊右上角的「Test Mode」。");
       if (!state.selectedUserId) return showMsg("提醒", "請先選擇您的姓名");
       
-      const currentQuestions = questionsData[state.currentTab];
       let isComplete = true;
-
-      for (let q of currentQuestions) {
+      for (let q of (questionsData[state.currentTab] || [])) {
         const ans = state.answers[q.id];
-        if (!ans || (Array.isArray(ans) && ans.length === 0)) {
-          isComplete = false; break;
-        }
+        if (!ans || (Array.isArray(ans) && ans.length === 0)) { isComplete = false; break; }
         if (q.requireSupplementIf && ((Array.isArray(ans) && ans.some(a=>q.requireSupplementIf.includes(a))) || q.requireSupplementIf.includes(ans))) {
-          if (!state.supplements[q.id] || state.supplements[q.id].trim() === '') {
-            return showMsg("提醒", `請填寫第 ${q.text.split('.')[0]} 題的補充說明。`);
-          }
+          if (!state.supplements[q.id] || state.supplements[q.id].trim() === '') return showMsg("提醒", `請填寫第 ${q.text.split('.')[0]} 題的補充說明。`);
         }
       }
-
       if (!isComplete) return showMsg("提醒", "請確認所有題目皆已填寫完畢。");
       if (!state.signatureData) return showMsg("提醒", "請點擊電子簽名區塊完成簽名。");
 
-      // Show Confirmation Modal with Date
       document.getElementById('confirm-date-display').textContent = new Date().toLocaleString('zh-TW');
       document.getElementById('modal-submit-confirm').classList.remove('hidden');
     }
@@ -866,11 +893,9 @@
       try {
         const docId = `${currentMonthStr}_${userObj.id}`;
         await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'evaluations', docId), evalData);
-        showMsg("成功", "評核表已成功送出，感謝您的填寫！");
-        els.userSelect.value = "";
-        handleUserSelect({target: {value: ''}});
+        document.getElementById('modal-success').classList.remove('hidden');
+        handleUserSelect(''); // reset
       } catch (err) {
-        console.error(err);
         showMsg("錯誤", "送出失敗，請重試。");
       } finally {
         els.submitBtn.disabled = false;
@@ -896,14 +921,11 @@
         document.getElementById('modal-login').classList.add('hidden');
         fetchEvaluations();
         updateUI();
-      } else {
-        showMsg("錯誤", "密碼錯誤！");
-      }
+      } else showMsg("錯誤", "密碼錯誤！");
     }
 
     function switchAdminTab(tab) {
       state.adminTab = tab;
-      
       const rBtn = document.getElementById('tab-records');
       const uBtn = document.getElementById('tab-users');
       
@@ -918,36 +940,29 @@
         document.getElementById('admin-records-section').classList.add('hidden');
         document.getElementById('admin-users-section').classList.remove('hidden');
       }
+      renderAdminView();
     }
 
     function renderAdminView() {
-      if (state.adminTab === 'records') {
-        renderAdminRecords();
-      } else {
-        renderAdminUsers();
-      }
+      if (state.adminTab === 'records') renderAdminRecords();
+      else renderAdminUsers();
     }
 
     function renderAdminRecords() {
       const list = document.getElementById('evaluations-list');
-      if (state.evaluations.length === 0) {
-        list.innerHTML = '<div class="text-center py-8 text-gray-500">該月份尚無評核紀錄</div>';
-        return;
-      }
+      if (state.evaluations.length === 0) return list.innerHTML = '<div class="text-center py-8 text-gray-500">該月份尚無評核紀錄</div>';
 
       let html = '';
       state.evaluations.forEach(ev => {
         let qHtml = '';
-        const qs = questionsData[ev.role] || [];
-        qs.forEach((q, idx) => {
+        (questionsData[ev.role] || []).forEach((q) => {
           let ansText = Array.isArray(ev.answers[q.id]) ? ev.answers[q.id].join('、') : ev.answers[q.id];
           qHtml += `
             <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-600">
               <p class="text-sm font-medium mb-1">${q.text}</p>
               <p class="text-blue-600 dark:text-blue-400 font-semibold">${ansText}</p>
               ${ev.supplements?.[q.id] ? `<div class="mt-2 text-sm bg-gray-50 dark:bg-gray-900 p-2 rounded"><span class="font-semibold">補充：</span>${ev.supplements[q.id]}</div>` : ''}
-            </div>
-          `;
+            </div>`;
         });
 
         html += `
@@ -961,10 +976,7 @@
                 </div>
               </div>
               <div class="flex items-center gap-3">
-                ${ev.managerComment 
-                  ? `<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1"><i class="ph ph-check-circle"></i>已建議</span>`
-                  : `<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">待建議</span>`
-                }
+                ${ev.managerComment ? `<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1"><i class="ph ph-check-circle"></i>已建議</span>` : `<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">待建議</span>`}
                 <i class="ph ph-caret-down text-gray-400 group-open:rotate-180 transition-transform"></i>
               </div>
             </summary>
@@ -980,19 +992,15 @@
                 <p class="text-xs text-blue-500 mt-2">* 離開文字框自動儲存</p>
               </div>
             </div>
-          </details>
-        `;
+          </details>`;
       });
       list.innerHTML = html;
 
       document.querySelectorAll('.admin-comment').forEach(ta => {
         ta.addEventListener('blur', async (e) => {
-          const val = e.target.value;
-          const id = e.target.dataset.id;
           try {
-            await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'evaluations', id), { managerComment: val });
-            showMsg("成功", "店長建議已儲存");
-            fetchEvaluations(); // Refresh
+            await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'evaluations', e.target.dataset.id), { managerComment: e.target.value });
+            showMsg("成功", "店長建議已儲存"); fetchEvaluations();
           } catch(err) { showMsg("錯誤","儲存失敗"); }
         });
       });
@@ -1001,26 +1009,39 @@
     function renderAdminUsers() {
       const list = document.getElementById('admin-users-list');
       let html = '';
-      state.users.forEach(u => {
+      state.users.forEach((u, index) => {
         const activeCls = u.active ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600' : 'bg-gray-100 dark:bg-gray-900 border-gray-200 text-gray-400 opacity-70';
         const txtCls = u.active ? '' : 'text-gray-400';
-        const btnCls = u.active ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100';
-        
+        const btnCls = u.active ? 'bg-orange-50 text-orange-600 hover:bg-orange-100 dark:bg-orange-900/30 dark:hover:bg-orange-900/50' : 'bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/30 dark:hover:bg-green-900/50';
+        const badgeClass = ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700';
+
         html += `
-          <div class="p-4 rounded-xl border flex items-center justify-between transition-colors ${activeCls}">
-            <div>
-              <p class="font-bold ${txtCls}">${u.name}</p>
-              <p class="text-xs text-gray-500">${u.role} | ${u.id}</p>
+          <div class="p-3 sm:p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between transition-colors ${activeCls} gap-3 sm:gap-0">
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+              <div class="flex flex-col gap-1 mr-2">
+                <button class="btn-move-up p-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed" data-index="${index}" ${index === 0 ? 'disabled' : ''}><i class="ph ph-caret-up font-bold"></i></button>
+                <button class="btn-move-down p-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed" data-index="${index}" ${index === state.users.length - 1 ? 'disabled' : ''}><i class="ph ph-caret-down font-bold"></i></button>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <p class="font-bold text-lg ${txtCls}">${u.name}</p>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">${u.role}</span>
+                </div>
+                <p class="text-xs text-gray-500">ID: ${u.id}</p>
+              </div>
             </div>
-            <div class="flex items-center gap-2">
+            
+            <div class="flex items-center gap-2 self-end sm:self-auto">
+              <button class="btn-edit-user p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded-lg transition-colors" data-id="${u.id}"><i class="ph ph-pencil-simple text-base"></i></button>
               <button class="btn-toggle-user text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${btnCls}" data-id="${u.id}">${u.active?'隱藏':'啟用'}</button>
-              <button class="btn-delete-user p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" data-id="${u.id}"><i class="ph ph-trash text-base"></i></button>
+              <button class="btn-delete-user p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" data-id="${u.id}"><i class="ph ph-trash text-base"></i></button>
             </div>
           </div>
         `;
       });
       list.innerHTML = html;
 
+      // Event Bindings for Admin List
       document.querySelectorAll('.btn-toggle-user').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const id = e.target.dataset.id;
@@ -1028,35 +1049,91 @@
           await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', id), { active: !user.active });
         });
       });
-
       document.querySelectorAll('.btn-delete-user').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          // ensure we get the button's data-id even if icon is clicked
-          const id = e.currentTarget.dataset.id; 
-          state.deleteTarget = id;
+          state.deleteTarget = e.currentTarget.dataset.id; 
           document.getElementById('modal-delete').classList.remove('hidden');
         });
       });
+      document.querySelectorAll('.btn-edit-user').forEach(btn => {
+        btn.addEventListener('click', (e) => { openUserForm('edit', e.currentTarget.dataset.id); });
+      });
+      document.querySelectorAll('.btn-move-up').forEach(btn => {
+        btn.addEventListener('click', (e) => { handleReorder(parseInt(e.currentTarget.dataset.index), -1); });
+      });
+      document.querySelectorAll('.btn-move-down').forEach(btn => {
+        btn.addEventListener('click', (e) => { handleReorder(parseInt(e.currentTarget.dataset.index), 1); });
+      });
     }
 
-    async function handleAddUser() {
-      const id = document.getElementById('new-user-id').value.trim();
-      const name = document.getElementById('new-user-name').value.trim();
-      const role = document.getElementById('new-user-role').value;
+    // --- User Adding / Editing / Reordering ---
+    function openUserForm(mode, userId = null) {
+      document.getElementById('user-form-mode').value = mode;
+      
+      if (mode === 'add') {
+        document.getElementById('user-form-title').textContent = "新增員工";
+        document.getElementById('user-form-id').value = "";
+        document.getElementById('user-form-id').disabled = false;
+        document.getElementById('user-form-name').value = "";
+        document.getElementById('user-form-role').value = "櫃台員工";
+      } else {
+        const u = state.users.find(user => user.id === userId);
+        if (!u) return;
+        document.getElementById('user-form-title').textContent = "編輯員工";
+        document.getElementById('user-form-id').value = u.id;
+        document.getElementById('user-form-id').disabled = true;
+        document.getElementById('user-form-name').value = u.name;
+        document.getElementById('user-form-role').value = u.role;
+      }
+      document.getElementById('modal-user-form').classList.remove('hidden');
+    }
+
+    async function handleSaveUserForm() {
+      const mode = document.getElementById('user-form-mode').value;
+      const id = document.getElementById('user-form-id').value.trim();
+      const name = document.getElementById('user-form-name').value.trim();
+      const role = document.getElementById('user-form-role').value;
 
       if(!id || !name) return showMsg("錯誤", "員編與姓名為必填！");
-      
       const uRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', id);
-      const snap = await getDoc(uRef);
-      if(snap.exists()) return showMsg("錯誤", "此員編已存在！");
+      
+      try {
+        if (mode === 'add') {
+          const snap = await getDoc(uRef);
+          if(snap.exists()) return showMsg("錯誤", "此員編已存在！");
+          // Put new user at the end
+          const newOrder = state.users.length > 0 ? (state.users[state.users.length - 1].order || 0) + 10 : 10;
+          await setDoc(uRef, { id, name, role, active: true, order: newOrder });
+          showMsg("成功", "已成功新增員工！");
+        } else {
+          await updateDoc(uRef, { name, role });
+          showMsg("成功", "員工資料更新成功！");
+        }
+        document.getElementById('modal-user-form').classList.add('hidden');
+      } catch(err) { 
+        showMsg("錯誤", "儲存失敗，請檢查權限設定"); 
+      }
+    }
+
+    async function handleReorder(index, direction) {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= state.users.length) return;
+      
+      let currentItem = state.users[index];
+      let swapItem = state.users[targetIndex];
+      
+      // Keep fallback just in case order is undefined
+      let currentOrder = currentItem.order || (index * 10);
+      let swapOrder = swapItem.order || (targetIndex * 10);
 
       try {
-        await setDoc(uRef, { id, name, role, active: true });
-        document.getElementById('modal-add-user').classList.add('hidden');
-        showMsg("成功", "已成功新增員工！");
-      } catch(err) { 
-        console.error("Add user error:", err);
-        showMsg("錯誤", "新增失敗，請檢查權限設定"); 
+        // Swap their order values in Firestore
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', currentItem.id), { order: swapOrder });
+        batch.update(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', swapItem.id), { order: currentOrder });
+        await batch.commit();
+      } catch (err) {
+        showMsg("錯誤", "順序調整失敗");
       }
     }
 
@@ -1067,10 +1144,7 @@
         document.getElementById('modal-delete').classList.add('hidden');
         state.deleteTarget = null;
         showMsg("成功", "已刪除員工！");
-      } catch(err) { 
-        console.error("Delete user error:", err);
-        showMsg("錯誤", "刪除失敗，請檢查權限設定"); 
-      }
+      } catch(err) { showMsg("錯誤", "刪除失敗"); }
     }
 
     // --- Utils ---
@@ -1084,7 +1158,6 @@
         document.getElementById('icon-theme').className = "ph ph-sun text-xl";
       }
     }
-
     function showMsg(title, msg) {
       document.getElementById('msg-title').textContent = title;
       document.getElementById('msg-content').textContent = msg;
@@ -1093,7 +1166,6 @@
 
     // Run
     init();
-
   </script>
 </body>
 </html>
