@@ -265,7 +265,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, collection, doc, setDoc, getDocs, getDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     // --- Configuration & Data ---
@@ -282,7 +282,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const APP_ID = "bulaosong-zhongqing-v1";
+    const APP_ID = typeof __app_id !== 'undefined' ? __app_id : "bulaosong-zhongqing-v1";
 
     const initialUsers = [
       { id: 'E001', name: '黃詩涵', role: '櫃台員工', active: true },
@@ -440,8 +440,13 @@
 
       // Firebase Auth
       try {
-        await signInAnonymously(auth);
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
       } catch (err) {
+        console.error("Auth Error:", err);
         showMsg("錯誤", "資料庫連線失敗，請重整網頁。");
       }
 
@@ -984,7 +989,10 @@
         await setDoc(uRef, { id, name, role, active: true });
         document.getElementById('modal-add-user').classList.add('hidden');
         showMsg("成功", "已成功新增員工！");
-      } catch(err) { showMsg("錯誤", "新增失敗"); }
+      } catch(err) { 
+        console.error("Add user error:", err);
+        showMsg("錯誤", "新增失敗，請檢查權限設定"); 
+      }
     }
 
     async function handleDeleteUser() {
@@ -994,7 +1002,10 @@
         document.getElementById('modal-delete').classList.add('hidden');
         state.deleteTarget = null;
         showMsg("成功", "已刪除員工！");
-      } catch(err) { showMsg("錯誤", "刪除失敗"); }
+      } catch(err) { 
+        console.error("Delete user error:", err);
+        showMsg("錯誤", "刪除失敗，請檢查權限設定"); 
+      }
     }
 
     // --- Utils ---
