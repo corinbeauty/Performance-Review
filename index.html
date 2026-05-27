@@ -344,27 +344,31 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDocs, getDoc, onSnapshot, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, getDoc, onSnapshot, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- Configuration & Data ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyACBeyjI_5qQ_UDygYQVPZ1PhA1Byjs7gw",
-      authDomain: "performance-review-3fb28.firebaseapp.com",
-      projectId: "performance-review-3fb28",
-      storageBucket: "performance-review-3fb28.firebasestorage.app",
-      messagingSenderId: "353081675040",
-      appId: "1:353081675040:web:0451e1455e48c4bd42db45",
-      measurementId: "G-M7XNX00SK3"
-    };
+    let firebaseConfig;
+    if (typeof __firebase_config !== 'undefined') {
+      firebaseConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
+    } else {
+      firebaseConfig = {
+        apiKey: "AIzaSyACBeyjI_5qQ_UDygYQVPZ1PhA1Byjs7gw",
+        authDomain: "performance-review-3fb28.firebaseapp.com",
+        projectId: "performance-review-3fb28",
+        storageBucket: "performance-review-3fb28.firebasestorage.app",
+        messagingSenderId: "353081675040",
+        appId: "1:353081675040:web:0451e1455e48c4bd42db45",
+        measurementId: "G-M7XNX00SK3"
+      };
+    }
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     const APP_ID = typeof __app_id !== 'undefined' ? __app_id : "bulaosong-zhongqing-v1";
 
-    // Update Initial Users with generic order (10, 20, 30...)
     const initialUsers = [
       { id: 'M001', name: '賴信吉', role: '店長', active: true, order: 10 },
       { id: 'E002', name: '劉芸汝', role: '櫃台主任', active: true, order: 20 },
@@ -386,7 +390,6 @@
 
     const ROLES = ['櫃台員工', '中繼員工', '櫃台主任', '中繼主任'];
 
-    // Role Colors Definition for Badge UI
     const ROLE_COLORS = {
       '店長': 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200 dark:border-purple-800',
       '櫃台主任': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
@@ -450,6 +453,7 @@
     let state = {
       users: [],
       evaluations: [],
+      allEvaluations: [],
       selectedUserId: '',
       currentTab: '櫃台員工',
       answers: {},
@@ -504,7 +508,16 @@
       els.clearSigBtn.addEventListener('click', clearSignature);
       els.submitBtn.addEventListener('click', handleSubmit);
       els.sigTrigger.addEventListener('click', openSignatureModal);
-      els.adminMonthPicker.addEventListener('change', (e) => { selectedAdminMonth = e.target.value; fetchEvaluations(); });
+      
+      els.adminMonthPicker.addEventListener('change', (e) => { 
+        selectedAdminMonth = e.target.value; 
+        if (state.allEvaluations) {
+          state.evaluations = state.allEvaluations
+            .filter(d => d.month === selectedAdminMonth)
+            .sort((a,b) => new Date(b.submitDate) - new Date(a.submitDate));
+          renderAdminRecords();
+        }
+      });
 
       // Admin Tabs
       document.getElementById('tab-records').addEventListener('click', () => switchAdminTab('records'));
@@ -540,7 +553,11 @@
 
       // Firebase Auth
       try {
-        await signInAnonymously(auth);
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
       } catch (err) {
         console.error("Auth Error:", err);
         showMsg("錯誤", "資料庫連線失敗，請重整網頁。");
@@ -552,6 +569,7 @@
           document.getElementById('main-header').classList.remove('hidden');
           document.getElementById('main-content').classList.remove('hidden');
           fetchUsers();
+          setupEvaluationsListener();
         }
       });
     }
@@ -590,10 +608,16 @@
       
       const container = document.getElementById('custom-user-list-container');
       let html = '';
-      const activeUsers = state.users.filter(u => u.active);
+      
+      // 找出當月份已經送出評核的清單 ID
+      const currentMonthEvaluations = (state.allEvaluations || []).filter(e => e.month === currentMonthStr);
+      const completedUserIds = currentMonthEvaluations.map(e => e.userId);
+      
+      // 篩選出目前啟用中，且「尚未完成評核」的人員
+      const activeUsers = state.users.filter(u => u.active && !completedUserIds.includes(u.id));
       
       if(activeUsers.length === 0) {
-         html = '<p class="text-gray-500 text-center p-4">目前沒有可選擇的人員</p>';
+         html = '<p class="text-gray-500 text-center p-4 font-medium">本月所有人員皆已完成評核</p>';
       } else {
          activeUsers.forEach(u => {
            const badgeClass = ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-700';
@@ -764,44 +788,62 @@
 
       document.getElementById('modal-signature').classList.remove('hidden');
       
-      const canvas = document.getElementById('modal-sig-canvas');
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const scale = window.devicePixelRatio || 1;
-      canvas.width = rect.width * scale;
-      canvas.height = rect.height * scale;
-      ctx = canvas.getContext('2d');
-      ctx.scale(scale, scale);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#000000';
+      // 使用 setTimeout 確保 modal 顯示並且動畫渲染穩定後，再取得畫布精準尺寸
+      setTimeout(() => {
+        const canvas = document.getElementById('modal-sig-canvas');
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const scale = window.devicePixelRatio || 1;
+        
+        canvas.width = rect.width * scale;
+        canvas.height = rect.height * scale;
+        
+        ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#000000';
 
-      isDrawing = false;
-      
-      if(!canvas.dataset.initialized) {
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
-        canvas.addEventListener('touchstart', startDrawing, {passive: false});
-        canvas.addEventListener('touchmove', draw, {passive: false});
-        canvas.addEventListener('touchend', stopDrawing);
-        canvas.dataset.initialized = "true";
-      }
+        isDrawing = false;
+        
+        if(!canvas.dataset.initialized) {
+          canvas.addEventListener('mousedown', startDrawing);
+          canvas.addEventListener('mousemove', draw);
+          canvas.addEventListener('mouseup', stopDrawing);
+          canvas.addEventListener('mouseout', stopDrawing);
+          canvas.addEventListener('touchstart', startDrawing, {passive: false});
+          canvas.addEventListener('touchmove', draw, {passive: false});
+          canvas.addEventListener('touchend', stopDrawing);
+          canvas.dataset.initialized = "true";
+        }
+      }, 50);
     }
 
     function getCoords(e) {
       const canvas = document.getElementById('modal-sig-canvas');
       const rect = canvas.getBoundingClientRect();
       let clientX, clientY;
-      if (e.touches && e.touches.length > 0) {
+      
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+      } else if (e.touches && e.touches.length > 0) {
         clientX = e.touches[0].clientX;
         clientY = e.touches[0].clientY;
       } else {
         clientX = e.clientX;
         clientY = e.clientY;
       }
-      return { x: clientX - rect.left, y: clientY - rect.top };
+      
+      // 動態計算 Canvas 內部解析度與 CSS 實際渲染尺寸之間的比例 (徹底解決偏移問題)
+      const dpr = window.devicePixelRatio || 1;
+      const scaleX = (canvas.width / dpr) / rect.width;
+      const scaleY = (canvas.height / dpr) / rect.height;
+
+      return { 
+        x: (clientX - rect.left) * scaleX, 
+        y: (clientY - rect.top) * scaleY 
+      };
     }
 
     function startDrawing(e) { e.preventDefault(); const coords = getCoords(e); ctx.beginPath(); ctx.moveTo(coords.x, coords.y); isDrawing = true; }
@@ -834,7 +876,6 @@
             await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id), u);
           });
         } else {
-          // SORT BY ORDER field during fetch
           const loadedUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
           state.users = loadedUsers.sort((a, b) => (a.order || 999) - (b.order || 999));
           updateUI();
@@ -842,16 +883,20 @@
       }, (err) => console.error(err));
     }
 
-    async function fetchEvaluations() {
+    // 將原本的 fetchEvaluations 替換為即時監聽機制，用於過濾已填寫人員與管理員列表更新
+    function setupEvaluationsListener() {
       const evalRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'evaluations');
-      try {
-        const snap = await getDocs(evalRef);
-        const allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        state.evaluations = allData
-          .filter(d => d.month === selectedAdminMonth)
-          .sort((a,b) => new Date(b.submitDate) - new Date(a.submitDate));
-        renderAdminRecords();
-      } catch (err) { console.error(err); }
+      onSnapshot(evalRef, (snapshot) => {
+        const allData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        state.allEvaluations = allData;
+        
+        if (state.isAdminMode) {
+          state.evaluations = allData
+            .filter(d => d.month === selectedAdminMonth)
+            .sort((a,b) => new Date(b.submitDate) - new Date(a.submitDate));
+          if(state.adminTab === 'records') renderAdminRecords();
+        }
+      }, (err) => console.error("Eval Error:", err));
     }
 
     async function handleSubmit() {
@@ -921,7 +966,11 @@
       if (pwd === '1016') {
         state.isAdminMode = true;
         document.getElementById('modal-login').classList.add('hidden');
-        fetchEvaluations();
+        if (state.allEvaluations) {
+          state.evaluations = state.allEvaluations
+            .filter(d => d.month === selectedAdminMonth)
+            .sort((a,b) => new Date(b.submitDate) - new Date(a.submitDate));
+        }
         updateUI();
       } else showMsg("錯誤", "密碼錯誤！");
     }
@@ -1002,7 +1051,7 @@
         ta.addEventListener('blur', async (e) => {
           try {
             await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'evaluations', e.target.dataset.id), { managerComment: e.target.value });
-            showMsg("成功", "店長建議已儲存"); fetchEvaluations();
+            showMsg("成功", "店長建議已儲存");
           } catch(err) { showMsg("錯誤","儲存失敗"); }
         });
       });
