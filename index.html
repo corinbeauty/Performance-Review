@@ -780,6 +780,43 @@
     let isDrawing = false;
     let ctx;
     
+    function initSignatureCanvas() {
+      const canvas = document.getElementById('modal-sig-canvas');
+      // 使用 offsetWidth 取得絕對不受動畫 scale 影響的純 CSS 佈局寬高
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      
+      // 如果彈跳視窗仍在載入初期尺寸尚未成形，則稍後重試
+      if (w === 0 || h === 0) {
+        setTimeout(initSignatureCanvas, 50);
+        return;
+      }
+      
+      const dpr = window.devicePixelRatio || 1;
+      // 設定畫布實際像素為 佈局像素 × 設備像素比
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      
+      ctx = canvas.getContext('2d');
+      // 設定繪圖上下文比例對齊設備像素
+      ctx.scale(dpr, dpr);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#000000';
+      
+      if(!canvas.dataset.initialized) {
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing, {passive: false});
+        canvas.addEventListener('touchmove', draw, {passive: false});
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.dataset.initialized = "true";
+      }
+    }
+
     function openSignatureModal() {
       const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
       if(!isSubmissionPeriod) {
@@ -787,36 +824,9 @@
       }
 
       document.getElementById('modal-signature').classList.remove('hidden');
-      
-      // 使用 setTimeout 確保 modal 顯示並且動畫渲染穩定後，再取得畫布精準尺寸
-      setTimeout(() => {
-        const canvas = document.getElementById('modal-sig-canvas');
-        const rect = canvas.parentElement.getBoundingClientRect();
-        const scale = window.devicePixelRatio || 1;
-        
-        canvas.width = rect.width * scale;
-        canvas.height = rect.height * scale;
-        
-        ctx = canvas.getContext('2d');
-        ctx.scale(scale, scale);
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = '#000000';
-
-        isDrawing = false;
-        
-        if(!canvas.dataset.initialized) {
-          canvas.addEventListener('mousedown', startDrawing);
-          canvas.addEventListener('mousemove', draw);
-          canvas.addEventListener('mouseup', stopDrawing);
-          canvas.addEventListener('mouseout', stopDrawing);
-          canvas.addEventListener('touchstart', startDrawing, {passive: false});
-          canvas.addEventListener('touchmove', draw, {passive: false});
-          canvas.addEventListener('touchend', stopDrawing);
-          canvas.dataset.initialized = "true";
-        }
-      }, 50);
+      isDrawing = false;
+      // 確保顯示後再取得 Canvas 的確切尺寸
+      setTimeout(initSignatureCanvas, 50);
     }
 
     function getCoords(e) {
@@ -835,21 +845,17 @@
         clientY = e.clientY;
       }
       
-      // 動態計算 Canvas 內部解析度與 CSS 實際渲染尺寸之間的比例 (徹底解決偏移問題)
-      const dpr = window.devicePixelRatio || 1;
-      const scaleX = (canvas.width / dpr) / rect.width;
-      const scaleY = (canvas.height / dpr) / rect.height;
+      // 計算實際點擊位置在畫布上的相對百分比，再乘上邏輯寬高 (無視外層彈跳視窗的 scale 動畫)
+      const x = (clientX - rect.left) / (rect.width || 1) * canvas.offsetWidth;
+      const y = (clientY - rect.top) / (rect.height || 1) * canvas.offsetHeight;
 
-      return { 
-        x: (clientX - rect.left) * scaleX, 
-        y: (clientY - rect.top) * scaleY 
-      };
+      return { x, y };
     }
 
     function startDrawing(e) { e.preventDefault(); const coords = getCoords(e); ctx.beginPath(); ctx.moveTo(coords.x, coords.y); isDrawing = true; }
     function draw(e) { if (!isDrawing) return; e.preventDefault(); const coords = getCoords(e); ctx.lineTo(coords.x, coords.y); ctx.stroke(); }
     function stopDrawing() { if (isDrawing) isDrawing = false; }
-    function clearModalSignature() { const canvas = document.getElementById('modal-sig-canvas'); ctx.clearRect(0, 0, canvas.width / (window.devicePixelRatio||1), canvas.height / (window.devicePixelRatio||1)); }
+    function clearModalSignature() { const canvas = document.getElementById('modal-sig-canvas'); ctx.clearRect(0, 0, canvas.width, canvas.height); }
     function saveModalSignature() {
       const canvas = document.getElementById('modal-sig-canvas');
       state.signatureData = canvas.toDataURL('image/png');
