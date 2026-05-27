@@ -1134,7 +1134,15 @@
             // 複製資料到新ID，刪除舊ID
             const oldUser = state.users.find(u => u.id === oldId);
             const batch = writeBatch(db);
-            batch.set(uRef, { id, name, role, active: oldUser.active, order: oldUser.order });
+            
+            // 加入防呆機制：確保不會寫入 undefined 導致 Firestore 報錯
+            batch.set(uRef, { 
+              id: id, 
+              name: name, 
+              role: role, 
+              active: oldUser.active !== undefined ? oldUser.active : true, 
+              order: oldUser.order !== undefined ? oldUser.order : 999 
+            });
             batch.delete(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', oldId));
             await batch.commit();
           } else {
@@ -1144,7 +1152,8 @@
         }
         document.getElementById('modal-user-form').classList.add('hidden');
       } catch(err) { 
-        showMsg("錯誤", "儲存失敗，請檢查權限設定"); 
+        console.error("Save User Error:", err);
+        showMsg("錯誤", "儲存失敗：" + err.message); 
       }
     }
 
