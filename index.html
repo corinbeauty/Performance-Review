@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>不老松中清店 員工評核</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {},
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar hiding for tabs */
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Animations */
+    .fade-in { animation: fadeIn 0.2s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .slide-up { animation: slideUp 0.3s ease-out; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300 font-sans text-gray-900 dark:text-gray-100 min-h-screen">
+
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div class="text-xl font-bold flex items-center gap-2">
+      <i class="ph ph-spinner animate-spin text-blue-600 text-2xl"></i>
+      載入系統中...
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 hidden" id="main-header">
+    <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <h1 class="text-xl font-bold tracking-wide">
+          不老松中清店 <span class="text-blue-600 dark:text-blue-400">員工評核</span>
+        </h1>
+        <button id="btn-test-mode" class="text-xs px-2 py-1 rounded border text-gray-400 border-gray-200 dark:border-gray-700" title="開發者測試模式(無視日期限制)">
+          Test Mode
+        </button>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="btn-theme" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
+          <i class="ph ph-moon text-xl" id="icon-theme"></i>
+        </button>
+        <button id="btn-admin-toggle" class="flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors">
+          <i class="ph ph-lock text-base"></i> <span id="text-admin-toggle">店長管理</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-8 hidden" id="main-content">
+    
+    <!-- === USER VIEW === -->
+    <div id="user-view" class="space-y-6">
+      
+      <!-- Status Banner -->
+      <div id="status-banner" class="hidden bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-xl flex items-center gap-3 shadow-sm">
+        <i class="ph ph-warning-circle text-2xl shrink-0"></i>
+        <div>
+          <p class="font-bold">目前非評核開放時間</p>
+          <p class="text-sm">系統開放時間為每月 20 號至 25 號，目前暫停填寫。 (<span id="banner-date"></span>)</p>
+        </div>
+      </div>
+
+      <!-- Step 1: Identification -->
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
+        <h2 class="text-lg font-bold mb-4 border-b pb-2 border-gray-100 dark:border-gray-700">第一步：身分確認</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">請選擇您的姓名</label>
+            <select id="user-select" class="w-full p-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 disabled:opacity-50">
+              <option value="">-- 點擊選擇 --</option>
+            </select>
+          </div>
+          <div id="user-info-display" class="flex flex-col justify-end hidden">
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 rounded-xl flex items-center gap-4">
+              <div id="user-avatar" class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-sm"></div>
+              <div>
+                <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">評核人員</p>
+                <p class="font-bold text-lg"><span id="user-name-display"></span> <span class="text-sm font-normal text-gray-500" id="user-id-display"></span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Questionnaire -->
+      <div id="questionnaire-container" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700 slide-up">
+        <!-- Tabs -->
+        <div id="role-tabs" class="flex overflow-x-auto bg-gray-100 dark:bg-gray-900 p-2 gap-2 hide-scrollbar">
+          <!-- Rendered via JS -->
+        </div>
+
+        <div class="p-6 md:p-8 space-y-8">
+          <div class="mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+            <h2 class="text-2xl font-bold">【<span id="q-month-display"></span>】<span id="q-role-display"></span> 自我評核</h2>
+            <p class="text-sm text-gray-500 mt-1">請依據本月實際狀況誠實作答，作為改善與面談之依據。</p>
+          </div>
+
+          <!-- Questions List -->
+          <div id="questions-list" class="space-y-6"></div>
+
+          <!-- Signature Section -->
+          <div class="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-bold mb-4">確認與簽名</h3>
+            <div class="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800 mb-4">
+              <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">本人確認以上填寫內容皆屬實，並願做為本月份工作表現與主管面談之依據。</p>
+              <div class="flex gap-4 text-sm text-gray-500 font-mono">
+                <span>系統日期: <span id="sig-date"></span></span>
+                <span>評核月份: <span id="sig-month"></span></span>
+              </div>
+            </div>
+            
+            <div id="signature-area">
+              <div class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden bg-white dark:bg-gray-100">
+                <canvas id="sig-canvas" class="w-full h-48 touch-none cursor-crosshair"></canvas>
+                <div id="sig-placeholder" class="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-400">請在此區域簽名</div>
+              </div>
+              <div class="flex justify-end mt-2">
+                <button id="btn-clear-sig" class="text-sm text-red-500 hover:text-red-700">清除重簽</button>
+              </div>
+            </div>
+
+            <button id="btn-submit" class="mt-6 w-full py-4 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:bg-gray-400 disabled:cursor-not-allowed">
+              <i class="ph ph-floppy-disk text-xl"></i> 送出本月評核
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === ADMIN VIEW === -->
+    <div id="admin-view" class="space-y-6 hidden">
+      <div class="flex gap-2 p-1 bg-gray-200 dark:bg-gray-800 rounded-xl w-fit">
+        <button id="tab-records" class="admin-tab-btn active flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow">
+          <i class="ph ph-file-text"></i> 評核紀錄
+        </button>
+        <button id="tab-users" class="admin-tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-700/50">
+          <i class="ph ph-users"></i> 名單管理
+        </button>
+      </div>
+
+      <!-- Records Tab -->
+      <div id="admin-records-section" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700 fade-in">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold">審閱評核紀錄</h2>
+          <input type="month" id="admin-month-picker" class="p-2 border rounded-lg bg-gray-50 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+        </div>
+        <div id="evaluations-list" class="space-y-4">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Users Tab -->
+      <div id="admin-users-section" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700 fade-in">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold">員工名單管理</h2>
+          <button id="btn-add-user-modal" class="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors">
+            <i class="ph ph-user-plus"></i> 新增員工
+          </button>
+        </div>
+        <div id="admin-users-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- === MODALS === -->
+  <!-- Admin Login Modal -->
+  <div id="modal-login" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-xl font-bold">店長管理登入</h3>
+        <button class="close-modal text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+      </div>
+      <div class="p-6">
+        <p class="text-sm text-gray-500 mb-4">請輸入管理權限密碼以檢視所有評核紀錄。</p>
+        <input type="password" id="admin-password" placeholder="請輸入密碼..." class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+        <button class="close-modal px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700">取消</button>
+        <button id="btn-login-confirm" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">登入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message Modal -->
+  <div id="modal-msg" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+      <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="text-xl font-bold" id="msg-title">訊息</h3>
+      </div>
+      <div class="p-6">
+        <p class="text-lg" id="msg-content"></p>
+      </div>
+      <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+        <button id="btn-msg-ok" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">了解</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div id="modal-delete" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-xl font-bold">確認刪除員工</h3>
+        <button class="close-modal text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+      </div>
+      <div class="p-6">
+        <p>確定要永久刪除此員工資料嗎？</p>
+        <p class="text-sm text-red-500 mt-2">* 注意：刪除後將無法以該員編登入，但不會影響過去已送出的評核紀錄。若只是暫時離職，建議使用「隱藏」功能即可。</p>
+      </div>
+      <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+        <button class="close-modal px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700">取消</button>
+        <button id="btn-delete-confirm" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow">確認刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add User Modal -->
+  <div id="modal-add-user" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-xl font-bold">新增員工</h3>
+        <button class="close-modal text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">員工編號 (ID)</label>
+          <input type="text" id="new-user-id" placeholder="例如: E011" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">員工姓名</label>
+          <input type="text" id="new-user-name" placeholder="請輸入姓名" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">選擇職務</label>
+          <select id="new-user-role" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
+            <option value="櫃台員工">櫃台員工</option>
+            <option value="中繼員工">中繼員工</option>
+            <option value="櫃台主任">櫃台主任</option>
+            <option value="中繼主任">中繼主任</option>
+            <option value="店長">店長</option>
+          </select>
+        </div>
+      </div>
+      <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+        <button class="close-modal px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700">取消</button>
+        <button id="btn-add-user-confirm" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">儲存新增</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, getDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // --- Configuration & Data ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBfS9CJMmhQfFkNB3mwco5apc9rDpp3ipw",
+      authDomain: "e-training-a6d4c.firebaseapp.com",
+      projectId: "e-training-a6d4c",
+      storageBucket: "e-training-a6d4c.firebasestorage.app",
+      messagingSenderId: "96150516095",
+      appId: "1:96150516095:web:750f1f466560642ec92a4a",
+      measurementId: "G-VB3WWZ8PYL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const APP_ID = "bulaosong-zhongqing-v1";
+
+    const initialUsers = [
+      { id: 'E001', name: '黃詩涵', role: '櫃台員工', active: true },
+      { id: 'E002', name: '劉芸汝', role: '櫃台主任', active: true },
+      { id: 'E003', name: '賴彥廷', role: '櫃台員工', active: true },
+      { id: 'E004', name: '黃靖雯', role: '櫃台員工', active: true },
+      { id: 'E005', name: '莊秉豐', role: '櫃台員工', active: true },
+      { id: 'E006', name: '呂佳霖', role: '櫃台主任', active: true },
+      { id: 'M001', name: '賴信吉', role: '店長', active: true },
+      { id: 'E007', name: '柏政權', role: '櫃台員工', active: true },
+      { id: 'E008', name: '王楷翔', role: '櫃台主任', active: true },
+      { id: 'E009', name: '施孟均', role: '櫃台員工', active: true },
+      { id: 'R001', name: '黃淑惠', role: '中繼員工', active: true },
+      { id: 'R002', name: '李采蓁', role: '中繼主任', active: true },
+      { id: 'R003', name: '范秀慈', role: '中繼員工', active: true },
+      { id: 'R004', name: '陳素珍', role: '中繼員工', active: true },
+      { id: 'R005', name: '李佳貝', role: '中繼員工', active: true },
+      { id: 'E010', name: '陳秀如', role: '櫃台主任', active: true }
+    ];
+
+    const ROLES = ['櫃台員工', '中繼員工', '櫃台主任', '中繼主任'];
+
+    const questionsData = {
+      '櫃台員工': [
+        { id: 'q1', text: '1. 這個月目前為止對自己表現滿意嗎？', type: 'radio', options: ['滿意', '尚可', '有待加強', '不滿意'], requireSupplementIf: ['有待加強', '不滿意'] },
+        { id: 'q2', text: '2. 若沒有客人的時候我都在做什麼？(複選)', type: 'checkbox', options: ['補充備品', '跟同事培養感情討論流程', '發券', '推廣評論', '販售週邊商品', '關心客人服務狀況', '站著發呆沒事做'] },
+        { id: 'q3', text: '3. 我在下班前會不會檢查備品是否充足？', type: 'radio', options: ['會，而且會補滿', '不會，下一班的人會處理', '我會視現場交接', '那不是我要做的'] },
+        { id: 'q4', text: '4. 我上班的狀況會不會造別同事間的困擾？', type: 'radio', options: ['不會，盡心盡力', '會，我不知道怎麼溝通', '其他：我跟同事沒有話題聊'] },
+        { id: 'q5', text: '5. 櫃台、A上、A下、休息室、B區 我的工作協調性如何？', type: 'radio', options: ['看到有缺馬上補位', '那些有別人會去做', '我會在站原地不知道要做什麼'] },
+        { id: 'q6', text: '6. 我的工作速度如何？', type: 'radio', options: ['很快且正確', '動作慢且慢慢走', '累積很多再一起處理'] },
+        { id: 'q7', text: '7. 我看到同事人不舒服我會怎麼做？(複選)', type: 'checkbox', options: ['盡力幫忙協助', '適時的關心狀況', '自己的工作崗位要自己顧好'] },
+        { id: 'q8', text: '8. 遇到客人或師傅的問題發生，我會怎麼做？', type: 'radio', options: ['先了解後回報給現場主管處理', '站在原地不知道要做什麼'] },
+        { id: 'q9', text: '9. 本月份對自己出勤狀況審視？', type: 'radio', options: ['出勤正常', '偶而遲到', '經常遲到', '經常請假'], requireSupplementIf: ['經常遲到', '經常請假'] },
+        { id: 'q10', text: '10. 綜和以上對自己的評分 (滿分10分)', type: 'number', min: 0, max: 10 }
+      ],
+      '中繼員工': [
+        { id: 'q1', text: '1. 這個月目前為止對自己表現滿意嗎？', type: 'radio', options: ['滿意', '尚可', '有待加強', '不滿意'], requireSupplementIf: ['有待加強', '不滿意'] },
+        { id: 'q2', text: '2. 若沒有客人的時候我都在做什麼？(複選)', type: 'checkbox', options: ['補充備品', '跟同事培養感情討論流程', '巡視各樓層', '站著發呆沒事做'] },
+        { id: 'q3', text: '3. 我在下班前會不會檢查備品是否充足？', type: 'radio', options: ['會，而且會補滿', '不會，下一班的人會處理', '我會視現場交接', '那不是我要做的'] },
+        { id: 'q4', text: '4. 我上班的狀況會不會造別同事間的困擾？', type: 'radio', options: ['不會，盡心盡力', '會，我不知道怎麼溝通', '其他：我跟同事沒有話題聊'] },
+        { id: 'q5', text: '5. 包廂、廁所、毛巾中繼站 我的工作協調性如何？', type: 'radio', options: ['看到有缺會補', '那些有別人會去做', '我會不知道要做什麼'] },
+        { id: 'q6', text: '6. 我的工作速度如何？', type: 'radio', options: ['很快且正確', '動作慢且慢慢走', '累積很多再一起處理'] },
+        { id: 'q7', text: '7. 我看到同事人不舒服我會怎麼做？(複選)', type: 'checkbox', options: ['盡力幫忙協助', '適時的關心狀況', '自己的工作要自己顧好'] },
+        { id: 'q8', text: '8. 遇到設備或備品補充問題發生，我會怎麼做？', type: 'radio', options: ['自己會先處理完成後回報給主管', '站在原地不知道要做什麼'] },
+        { id: 'q9', text: '9. 本月份對自己出勤狀況審視？', type: 'radio', options: ['出勤正常', '偶而遲到', '經常遲到', '經常請假'], requireSupplementIf: ['經常遲到', '經常請假'] },
+        { id: 'q10', text: '10. 綜和以上對自己的評分 (滿分10分)', type: 'number', min: 0, max: 10 }
+      ],
+      '櫃台主任': [
+        { id: 'q1', text: '1. 對本月部門整體表現滿意嗎？', type: 'radio', options: ['滿意', '尚可', '有待加強', '不滿意'], requireSupplementIf: ['有待加強', '不滿意'] },
+        { id: 'q2', text: '2. 現場無客時，如何安排員工動線與事務？(複選)', type: 'checkbox', options: ['督促補充備品', '帶領討論流程優化', '安排教育訓練', '處理客訴追蹤', '規劃行銷活動', '無特別安排'] },
+        { id: 'q3', text: '3. 如何督促員工落實備品檢查？', type: 'radio', options: ['建立表單並親自抽查', '口頭提醒交接', '發生短缺時才處理', '未特別規範'] },
+        { id: 'q4', text: '4. 如何排解員工間的溝通問題？', type: 'radio', options: ['主動介入了解並協調', '讓他們自行解決', '只處理嚴重衝突'] },
+        { id: 'q5', text: '5. 跨區域(A上/A下/B區)協調管理成效？', type: 'radio', options: ['調度順暢，能互相補位', '偶有卡頓，尚可維持', '經常出現空窗期無人處理'] },
+        { id: 'q6', text: '6. 如何提升團隊整體工作效率？', type: 'radio', options: ['建立標準SOP並落實', '依賴個別員工能力', '目前沒有特別方法'] },
+        { id: 'q7', text: '7. 員工身體不適時的應變調度？(複選)', type: 'checkbox', options: ['立即安排休息並找人代班', '視現場狀況調整', '要求撐完當下工作'] },
+        { id: 'q8', text: '8. 處理客訴或師傅問題的流程改善？', type: 'radio', options: ['第一時間處理並記錄檢討', '僅處理當下問題', '回報給店長處理'] },
+        { id: 'q9', text: '9. 本月部門出勤狀況管理與改善對策？', type: 'radio', options: ['良好，無須特別改善', '偶有狀況，已個別約談', '不佳，需擬定扣罰或獎勵機制'], requireSupplementIf: ['偶有狀況，已個別約談', '不佳，需擬定扣罰或獎勵機制'] },
+        { id: 'q10', text: '10. 綜合管理評分 (滿分10分)', type: 'number', min: 0, max: 10 }
+      ],
+      '中繼主任': [
+        { id: 'q1', text: '1. 對本月中繼部門整體表現滿意嗎？', type: 'radio', options: ['滿意', '尚可', '有待加強', '不滿意'], requireSupplementIf: ['有待加強', '不滿意'] },
+        { id: 'q2', text: '2. 現場無客時，中繼區域的巡視與人員安排？(複選)', type: 'checkbox', options: ['督促環境整潔', '安排設備保養', '盤點物資庫存', '帶領流程討論', '無特別安排'] },
+        { id: 'q3', text: '3. 如何確保各樓層備品充足且確實交接？', type: 'radio', options: ['制定盤點表並嚴格落實', '口頭宣導', '發現沒了再補', '未特別規範'] },
+        { id: 'q4', text: '4. 中繼員工間的團隊合作氣氛管理？', type: 'radio', options: ['氣氛融洽，互助合作', '普通，各自做各自的', '時有摩擦，需介入協調'] },
+        { id: 'q5', text: '5. 包廂/廁所/毛巾站的跨區支援協調？', type: 'radio', options: ['機動性高，補位迅速', '尚可，需主管指令才動作', '反應慢，經常找不到人'] },
+        { id: 'q6', text: '6. 中繼團隊的工作節奏與效率管控？', type: 'radio', options: ['能應付尖峰時段需求', '平常可，人多時會混亂', '整體速度偏慢'] },
+        { id: 'q7', text: '7. 中繼員工身體不適時的應變調度？(複選)', type: 'checkbox', options: ['立即安排休息並找人代班', '視現場狀況調整', '要求撐完當下工作'] },
+        { id: 'q8', text: '8. 設備損壞或備品異常的危機處理？', type: 'radio', options: ['第一時間報修並尋找替代方案', '僅通報，等待修繕', '不知如何處理'] },
+        { id: 'q9', text: '9. 本月中繼部門出勤狀況管理與改善對策？', type: 'radio', options: ['良好，無須特別改善', '偶有狀況，已個別約談', '不佳，需擬定機制'], requireSupplementIf: ['偶有狀況，已個別約談', '不佳，需擬定機制'] },
+        { id: 'q10', text: '10. 綜合管理評分 (滿分10分)', type: 'number', min: 0, max: 10 }
+      ]
+    };
+
+    // --- State ---
+    let state = {
+      users: [],
+      evaluations: [],
+      selectedUserId: '',
+      currentTab: '櫃台員工',
+      answers: {},
+      supplements: {},
+      signatureData: null,
+      isAdminMode: false,
+      testMode: false,
+      isSubmitting: false,
+      adminTab: 'records',
+      deleteTarget: null
+    };
+
+    // Dates
+    const today = new Date();
+    const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    let selectedAdminMonth = currentMonthStr;
+
+    // --- DOM Elements ---
+    const els = {
+      themeBtn: document.getElementById('btn-theme'),
+      testModeBtn: document.getElementById('btn-test-mode'),
+      adminToggleBtn: document.getElementById('btn-admin-toggle'),
+      userSelect: document.getElementById('user-select'),
+      questionsList: document.getElementById('questions-list'),
+      sigCanvas: document.getElementById('sig-canvas'),
+      clearSigBtn: document.getElementById('btn-clear-sig'),
+      submitBtn: document.getElementById('btn-submit'),
+      adminMonthPicker: document.getElementById('admin-month-picker')
+    };
+
+    // --- Init ---
+    async function init() {
+      // Theme setup
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      }
+      
+      // Date displays
+      document.getElementById('sig-date').textContent = today.toLocaleDateString('zh-TW');
+      document.getElementById('sig-month').textContent = currentMonthStr;
+      document.getElementById('q-month-display').textContent = currentMonthStr;
+      document.getElementById('banner-date').textContent = today.toLocaleDateString('zh-TW');
+      els.adminMonthPicker.value = currentMonthStr;
+
+      // Event Listeners
+      els.themeBtn.addEventListener('click', toggleTheme);
+      els.testModeBtn.addEventListener('click', () => { state.testMode = !state.testMode; updateUI(); });
+      els.adminToggleBtn.addEventListener('click', toggleAdminMode);
+      els.userSelect.addEventListener('change', handleUserSelect);
+      els.clearSigBtn.addEventListener('click', clearSignature);
+      els.submitBtn.addEventListener('click', handleSubmit);
+      els.adminMonthPicker.addEventListener('change', (e) => { selectedAdminMonth = e.target.value; fetchEvaluations(); });
+
+      // Admin Tabs
+      document.getElementById('tab-records').addEventListener('click', () => switchAdminTab('records'));
+      document.getElementById('tab-users').addEventListener('click', () => switchAdminTab('users'));
+
+      // Modals bindings
+      document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('[id^="modal-"]').forEach(m => m.classList.add('hidden'));
+        });
+      });
+      document.getElementById('btn-login-confirm').addEventListener('click', confirmLogin);
+      document.getElementById('admin-password').addEventListener('keydown', (e) => e.key === 'Enter' && confirmLogin());
+      document.getElementById('btn-msg-ok').addEventListener('click', () => document.getElementById('modal-msg').classList.add('hidden'));
+      document.getElementById('btn-delete-confirm').addEventListener('click', handleDeleteUser);
+      document.getElementById('btn-add-user-modal').addEventListener('click', () => {
+        document.getElementById('new-user-id').value = '';
+        document.getElementById('new-user-name').value = '';
+        document.getElementById('new-user-role').value = '櫃台員工';
+        document.getElementById('modal-add-user').classList.remove('hidden');
+      });
+      document.getElementById('btn-add-user-confirm').addEventListener('click', handleAddUser);
+
+      // Setup Canvas
+      initSignaturePad();
+
+      // Firebase Auth
+      try {
+        await signInAnonymously(auth);
+      } catch (err) {
+        showMsg("錯誤", "資料庫連線失敗，請重整網頁。");
+      }
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          document.getElementById('loading-screen').classList.add('hidden');
+          document.getElementById('main-header').classList.remove('hidden');
+          document.getElementById('main-content').classList.remove('hidden');
+          fetchUsers();
+        }
+      });
+    }
+
+    // --- Core UI Updates ---
+    function updateUI() {
+      const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
+      
+      // Test Mode Button
+      if (state.testMode) {
+        els.testModeBtn.className = "text-xs px-2 py-1 rounded border bg-red-100 text-red-600 border-red-300";
+      } else {
+        els.testModeBtn.className = "text-xs px-2 py-1 rounded border text-gray-400 border-gray-200 dark:border-gray-700";
+      }
+
+      // Status Banner
+      if (!isSubmissionPeriod && !state.isAdminMode) {
+        document.getElementById('status-banner').classList.remove('hidden');
+      } else {
+        document.getElementById('status-banner').classList.add('hidden');
+      }
+
+      // Main Views Toggle
+      if (state.isAdminMode) {
+        document.getElementById('user-view').classList.add('hidden');
+        document.getElementById('admin-view').classList.remove('hidden');
+        document.getElementById('text-admin-toggle').textContent = "登出管理";
+        els.adminToggleBtn.classList.add('text-red-600');
+        renderAdminView();
+      } else {
+        document.getElementById('user-view').classList.remove('hidden');
+        document.getElementById('admin-view').classList.add('hidden');
+        document.getElementById('text-admin-toggle').textContent = "店長管理";
+        els.adminToggleBtn.classList.remove('text-red-600');
+        renderUserView(isSubmissionPeriod);
+      }
+    }
+
+    // --- User Logic ---
+    function renderUserView(isSubmissionPeriod) {
+      // User Select options
+      const activeUsers = state.users.filter(u => u.active);
+      const currVal = els.userSelect.value;
+      
+      let optsHtml = '<option value="">-- 點擊選擇 --</option>';
+      activeUsers.forEach(u => {
+        optsHtml += `<option value="${u.id}" ${u.id === currVal ? 'selected' : ''}>${u.name} (${u.role})</option>`;
+      });
+      els.userSelect.innerHTML = optsHtml;
+      els.userSelect.disabled = !isSubmissionPeriod;
+
+      const userObj = state.users.find(u => u.id === state.selectedUserId);
+      
+      if (userObj) {
+        document.getElementById('user-info-display').classList.remove('hidden');
+        document.getElementById('user-avatar').textContent = userObj.name[0];
+        document.getElementById('user-name-display').textContent = userObj.name;
+        document.getElementById('user-id-display').textContent = `員編: ${userObj.id}`;
+        
+        document.getElementById('questionnaire-container').classList.remove('hidden');
+        renderRoleTabs();
+        document.getElementById('q-role-display').textContent = state.currentTab;
+        
+        renderQuestions(isSubmissionPeriod);
+        
+        if (!isSubmissionPeriod) {
+          document.getElementById('sig-placeholder').textContent = "目前未開放填寫";
+          els.submitBtn.disabled = true;
+        } else {
+          document.getElementById('sig-placeholder').textContent = state.signatureData ? "" : "請在此區域簽名";
+          els.submitBtn.disabled = false;
+        }
+
+      } else {
+        document.getElementById('user-info-display').classList.add('hidden');
+        document.getElementById('questionnaire-container').classList.add('hidden');
+      }
+    }
+
+    function renderRoleTabs() {
+      const container = document.getElementById('role-tabs');
+      let html = '';
+      ROLES.forEach(role => {
+        const isActive = state.currentTab === role;
+        const classes = isActive 
+          ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm border-b-2 border-blue-600'
+          : 'text-gray-500 dark:text-gray-400 opacity-50';
+        html += `<div class="px-4 py-3 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${classes}">${role}</div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function renderQuestions(isSubmissionPeriod) {
+      const questions = questionsData[state.currentTab] || [];
+      let html = '';
+
+      questions.forEach(q => {
+        html += `<div class="bg-gray-50 dark:bg-gray-900/50 p-5 rounded-xl border border-gray-100 dark:border-gray-700">
+                  <p class="font-semibold mb-4 text-lg">${q.text}</p>`;
+        
+        if (q.type === 'number') {
+          const val = state.answers[q.id] || '';
+          html += `<div class="w-full md:w-1/3">
+                    <input type="number" min="${q.min}" max="${q.max}" data-qid="${q.id}" data-type="number" value="${val}" ${!isSubmissionPeriod?'disabled':''} 
+                    class="q-input w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 disabled:opacity-50" placeholder="0 ~ ${q.max}">
+                  </div>`;
+        } else {
+          html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
+          q.options.forEach(opt => {
+            const isChecked = q.type === 'radio' ? state.answers[q.id] === opt : (state.answers[q.id] || []).includes(opt);
+            const activeClass = isChecked ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600';
+            const disabledClass = !isSubmissionPeriod ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700';
+            
+            html += `<label class="flex items-center p-3 rounded-lg border transition-colors ${activeClass} ${disabledClass}">
+                      <input type="${q.type}" name="${q.id}" value="${opt}" data-qid="${q.id}" data-type="${q.type}" ${isChecked?'checked':''} ${!isSubmissionPeriod?'disabled':''}
+                      class="q-input w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
+                      <span class="ml-3">${opt}</span>
+                    </label>`;
+          });
+          html += `</div>`;
+        }
+
+        // Supplement Box
+        const ans = state.answers[q.id];
+        const showSupp = q.requireSupplementIf && ((Array.isArray(ans) && ans.some(a=>q.requireSupplementIf.includes(a))) || q.requireSupplementIf.includes(ans));
+        
+        if (showSupp) {
+          const suppVal = state.supplements[q.id] || '';
+          html += `<div class="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg fade-in">
+                    <label class="block text-sm font-medium text-orange-800 dark:text-orange-300 mb-2">請簡述原因或改善方針 (必填)</label>
+                    <textarea data-qid="${q.id}" rows="2" ${!isSubmissionPeriod?'disabled':''}
+                    class="q-supp w-full p-3 rounded-lg border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500 disabled:opacity-50" placeholder="請在此輸入...">${suppVal}</textarea>
+                  </div>`;
+        }
+        
+        html += `</div>`;
+      });
+
+      els.questionsList.innerHTML = html;
+
+      // Attach events
+      document.querySelectorAll('.q-input').forEach(el => {
+        el.addEventListener('change', (e) => {
+          const qId = e.target.dataset.qid;
+          const type = e.target.dataset.type;
+          const val = e.target.value;
+          
+          if (type === 'checkbox') {
+            let currentVals = state.answers[qId] || [];
+            if (e.target.checked) currentVals.push(val);
+            else currentVals = currentVals.filter(v => v !== val);
+            state.answers[qId] = currentVals;
+          } else {
+            state.answers[qId] = val;
+          }
+          renderQuestions(isSubmissionPeriod); // Re-render to show/hide supplements and update active classes
+        });
+      });
+
+      // Handle number inputs (on input instead of change)
+      document.querySelectorAll('.q-input[type="number"]').forEach(el => {
+        el.addEventListener('input', (e) => {
+           state.answers[e.target.dataset.qid] = e.target.value;
+        });
+      });
+
+      document.querySelectorAll('.q-supp').forEach(el => {
+        el.addEventListener('input', (e) => {
+          state.supplements[e.target.dataset.qid] = e.target.value;
+        });
+      });
+    }
+
+    function handleUserSelect(e) {
+      const userId = e.target.value;
+      state.selectedUserId = userId;
+      const user = state.users.find(u => u.id === userId);
+      if (user) state.currentTab = user.role;
+      
+      // Reset forms
+      state.answers = {};
+      state.supplements = {};
+      clearSignature();
+      updateUI();
+    }
+
+    // --- Signature Pad Logic ---
+    let isDrawing = false;
+    let ctx;
+    
+    function initSignaturePad() {
+      const canvas = els.sigCanvas;
+      const rect = canvas.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 1;
+      // Fixed width/height for display via css, high-res internal
+      canvas.width = rect.width * scale;
+      canvas.height = rect.height * scale;
+      ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3;
+      
+      updateSigTheme();
+
+      canvas.addEventListener('mousedown', startDrawing);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDrawing);
+      canvas.addEventListener('mouseout', stopDrawing);
+      canvas.addEventListener('touchstart', startDrawing, {passive: false});
+      canvas.addEventListener('touchmove', draw, {passive: false});
+      canvas.addEventListener('touchend', stopDrawing);
+    }
+
+    function updateSigTheme() {
+      if(ctx) ctx.strokeStyle = document.documentElement.classList.contains('dark') ? '#ffffff' : '#000000';
+    }
+
+    function getCoords(e) {
+      const rect = els.sigCanvas.getBoundingClientRect();
+      let clientX, clientY;
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function startDrawing(e) {
+      const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
+      if(!isSubmissionPeriod) return;
+      
+      e.preventDefault();
+      document.getElementById('sig-placeholder').classList.add('hidden');
+      const coords = getCoords(e);
+      ctx.beginPath();
+      ctx.moveTo(coords.x, coords.y);
+      isDrawing = true;
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const coords = getCoords(e);
+      ctx.lineTo(coords.x, coords.y);
+      ctx.stroke();
+    }
+
+    function stopDrawing() {
+      if (isDrawing) {
+        isDrawing = false;
+        state.signatureData = els.sigCanvas.toDataURL('image/png');
+      }
+    }
+
+    function clearSignature() {
+      if(!ctx) return;
+      const canvas = els.sigCanvas;
+      ctx.clearRect(0, 0, canvas.width / (window.devicePixelRatio||1), canvas.height / (window.devicePixelRatio||1));
+      state.signatureData = null;
+      document.getElementById('sig-placeholder').classList.remove('hidden');
+    }
+
+    // --- Database Interactions ---
+    function fetchUsers() {
+      const usersRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'users');
+      onSnapshot(usersRef, (snapshot) => {
+        if (snapshot.empty) {
+          // Sync hardcoded defaults
+          initialUsers.forEach(async (u) => {
+            await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id), u);
+          });
+        } else {
+          const loadedUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          state.users = loadedUsers;
+          
+          // Inject missing
+          initialUsers.forEach(async (initU) => {
+            if (!loadedUsers.find(lu => lu.id === initU.id)) {
+              await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', initU.id), initU);
+            }
+          });
+          
+          updateUI();
+        }
+      }, (err) => console.error(err));
+    }
+
+    async function fetchEvaluations() {
+      const evalRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'evaluations');
+      try {
+        const snap = await getDocs(evalRef);
+        const allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        state.evaluations = allData
+          .filter(d => d.month === selectedAdminMonth)
+          .sort((a,b) => new Date(b.submitDate) - new Date(a.submitDate));
+        renderAdminRecords();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function handleSubmit() {
+      if (!state.selectedUserId) return showMsg("提醒", "請先選擇您的姓名");
+      
+      const currentQuestions = questionsData[state.currentTab];
+      let isComplete = true;
+
+      for (let q of currentQuestions) {
+        const ans = state.answers[q.id];
+        if (!ans || (Array.isArray(ans) && ans.length === 0)) {
+          isComplete = false; break;
+        }
+        if (q.requireSupplementIf && ((Array.isArray(ans) && ans.some(a=>q.requireSupplementIf.includes(a))) || q.requireSupplementIf.includes(ans))) {
+          if (!state.supplements[q.id] || state.supplements[q.id].trim() === '') {
+            return showMsg("提醒", `請填寫第 ${q.text.split('.')[0]} 題的補充說明。`);
+          }
+        }
+      }
+
+      if (!isComplete) return showMsg("提醒", "請確認所有題目皆已填寫完畢。");
+      if (!state.signatureData) return showMsg("提醒", "請完成電子簽名。");
+
+      els.submitBtn.disabled = true;
+      els.submitBtn.innerHTML = '<i class="ph ph-spinner animate-spin text-xl"></i> 資料傳送中...';
+      
+      const userObj = state.users.find(u => u.id === state.selectedUserId);
+      const evalData = {
+        userId: userObj.id,
+        userName: userObj.name,
+        role: state.currentTab,
+        month: currentMonthStr,
+        answers: state.answers,
+        supplements: state.supplements,
+        signature: state.signatureData,
+        submitDate: new Date().toISOString(),
+        managerComment: ''
+      };
+
+      try {
+        const docId = `${currentMonthStr}_${userObj.id}`;
+        await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'evaluations', docId), evalData);
+        showMsg("成功", "評核表已成功送出，感謝您的填寫！");
+        els.userSelect.value = "";
+        handleUserSelect({target: {value: ''}});
+      } catch (err) {
+        console.error(err);
+        showMsg("錯誤", "送出失敗，請重試。");
+      } finally {
+        els.submitBtn.disabled = false;
+        els.submitBtn.innerHTML = '<i class="ph ph-floppy-disk text-xl"></i> 送出本月評核';
+      }
+    }
+
+    // --- Admin UI Logic ---
+    function toggleAdminMode() {
+      if (state.isAdminMode) {
+        state.isAdminMode = false;
+        updateUI();
+      } else {
+        document.getElementById('admin-password').value = '';
+        document.getElementById('modal-login').classList.remove('hidden');
+      }
+    }
+
+    function confirmLogin() {
+      const pwd = document.getElementById('admin-password').value;
+      if (pwd === '1016') {
+        state.isAdminMode = true;
+        document.getElementById('modal-login').classList.add('hidden');
+        fetchEvaluations();
+        updateUI();
+      } else {
+        showMsg("錯誤", "密碼錯誤！");
+      }
+    }
+
+    function switchAdminTab(tab) {
+      state.adminTab = tab;
+      
+      const rBtn = document.getElementById('tab-records');
+      const uBtn = document.getElementById('tab-users');
+      
+      if (tab === 'records') {
+        rBtn.className = "admin-tab-btn active flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow";
+        uBtn.className = "admin-tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-700/50";
+        document.getElementById('admin-records-section').classList.remove('hidden');
+        document.getElementById('admin-users-section').classList.add('hidden');
+      } else {
+        uBtn.className = "admin-tab-btn active flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow";
+        rBtn.className = "admin-tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-700/50";
+        document.getElementById('admin-records-section').classList.add('hidden');
+        document.getElementById('admin-users-section').classList.remove('hidden');
+      }
+    }
+
+    function renderAdminView() {
+      if (state.adminTab === 'records') {
+        renderAdminRecords();
+      } else {
+        renderAdminUsers();
+      }
+    }
+
+    function renderAdminRecords() {
+      const list = document.getElementById('evaluations-list');
+      if (state.evaluations.length === 0) {
+        list.innerHTML = '<div class="text-center py-8 text-gray-500">該月份尚無評核紀錄</div>';
+        return;
+      }
+
+      let html = '';
+      state.evaluations.forEach(ev => {
+        let qHtml = '';
+        const qs = questionsData[ev.role] || [];
+        qs.forEach((q, idx) => {
+          let ansText = Array.isArray(ev.answers[q.id]) ? ev.answers[q.id].join('、') : ev.answers[q.id];
+          qHtml += `
+            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-600">
+              <p class="text-sm font-medium mb-1">${q.text}</p>
+              <p class="text-blue-600 dark:text-blue-400 font-semibold">${ansText}</p>
+              ${ev.supplements?.[q.id] ? `<div class="mt-2 text-sm bg-gray-50 dark:bg-gray-900 p-2 rounded"><span class="font-semibold">補充：</span>${ev.supplements[q.id]}</div>` : ''}
+            </div>
+          `;
+        });
+
+        html += `
+          <details class="group bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
+            <summary class="p-4 flex items-center justify-between cursor-pointer list-none">
+              <div class="flex items-center gap-4">
+                <div class="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 w-10 h-10 rounded-full flex items-center justify-center font-bold">${ev.userName[0]}</div>
+                <div>
+                  <p class="font-bold">${ev.userName} <span class="text-xs text-gray-500 ml-2">${ev.role} (${ev.userId})</span></p>
+                  <p class="text-xs text-gray-500">${new Date(ev.submitDate).toLocaleString('zh-TW')} 提交</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                ${ev.managerComment 
+                  ? `<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1"><i class="ph ph-check-circle"></i>已建議</span>`
+                  : `<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">待建議</span>`
+                }
+                <i class="ph ph-caret-down text-gray-400 group-open:rotate-180 transition-transform"></i>
+              </div>
+            </summary>
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+              <div class="space-y-4 mb-6">${qHtml}</div>
+              <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mb-6">
+                <p class="text-sm text-gray-500 mb-2">員工電子簽名：</p>
+                ${ev.signature ? `<img src="${ev.signature}" alt="Sig" class="h-16 bg-white dark:bg-gray-100 rounded border">` : ''}
+              </div>
+              <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+                <h4 class="font-bold text-blue-800 dark:text-blue-300 flex items-center gap-2 mb-2"><i class="ph ph-pencil-simple"></i> 店長建議事項</h4>
+                <textarea class="admin-comment w-full p-3 rounded-lg border border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500" rows="3" placeholder="請輸入給該員工的回饋與建議..." data-id="${ev.id}">${ev.managerComment || ''}</textarea>
+                <p class="text-xs text-blue-500 mt-2">* 離開文字框自動儲存</p>
+              </div>
+            </div>
+          </details>
+        `;
+      });
+      list.innerHTML = html;
+
+      document.querySelectorAll('.admin-comment').forEach(ta => {
+        ta.addEventListener('blur', async (e) => {
+          const val = e.target.value;
+          const id = e.target.dataset.id;
+          try {
+            await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'evaluations', id), { managerComment: val });
+            showMsg("成功", "店長建議已儲存");
+            fetchEvaluations(); // Refresh
+          } catch(err) { showMsg("錯誤","儲存失敗"); }
+        });
+      });
+    }
+
+    function renderAdminUsers() {
+      const list = document.getElementById('admin-users-list');
+      let html = '';
+      state.users.forEach(u => {
+        const activeCls = u.active ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600' : 'bg-gray-100 dark:bg-gray-900 border-gray-200 text-gray-400 opacity-70';
+        const txtCls = u.active ? '' : 'text-gray-400';
+        const btnCls = u.active ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100';
+        
+        html += `
+          <div class="p-4 rounded-xl border flex items-center justify-between transition-colors ${activeCls}">
+            <div>
+              <p class="font-bold ${txtCls}">${u.name}</p>
+              <p class="text-xs text-gray-500">${u.role} | ${u.id}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="btn-toggle-user text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${btnCls}" data-id="${u.id}">${u.active?'隱藏':'啟用'}</button>
+              <button class="btn-delete-user p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" data-id="${u.id}"><i class="ph ph-trash text-base"></i></button>
+            </div>
+          </div>
+        `;
+      });
+      list.innerHTML = html;
+
+      document.querySelectorAll('.btn-toggle-user').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = e.target.dataset.id;
+          const user = state.users.find(u=>u.id===id);
+          await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', id), { active: !user.active });
+        });
+      });
+
+      document.querySelectorAll('.btn-delete-user').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          // ensure we get the button's data-id even if icon is clicked
+          const id = e.currentTarget.dataset.id; 
+          state.deleteTarget = id;
+          document.getElementById('modal-delete').classList.remove('hidden');
+        });
+      });
+    }
+
+    async function handleAddUser() {
+      const id = document.getElementById('new-user-id').value.trim();
+      const name = document.getElementById('new-user-name').value.trim();
+      const role = document.getElementById('new-user-role').value;
+
+      if(!id || !name) return showMsg("錯誤", "員編與姓名為必填！");
+      
+      const uRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', id);
+      const snap = await getDoc(uRef);
+      if(snap.exists()) return showMsg("錯誤", "此員編已存在！");
+
+      try {
+        await setDoc(uRef, { id, name, role, active: true });
+        document.getElementById('modal-add-user').classList.add('hidden');
+        showMsg("成功", "已成功新增員工！");
+      } catch(err) { showMsg("錯誤", "新增失敗"); }
+    }
+
+    async function handleDeleteUser() {
+      if(!state.deleteTarget) return;
+      try {
+        await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', state.deleteTarget));
+        document.getElementById('modal-delete').classList.add('hidden');
+        state.deleteTarget = null;
+        showMsg("成功", "已刪除員工！");
+      } catch(err) { showMsg("錯誤", "刪除失敗"); }
+    }
+
+    // --- Utils ---
+    function toggleTheme() {
+      const docEl = document.documentElement;
+      if (docEl.classList.contains('dark')) {
+        docEl.classList.remove('dark');
+        document.getElementById('icon-theme').className = "ph ph-moon text-xl";
+      } else {
+        docEl.classList.add('dark');
+        document.getElementById('icon-theme').className = "ph ph-sun text-xl";
+      }
+      updateSigTheme();
+    }
+
+    function showMsg(title, msg) {
+      document.getElementById('msg-title').textContent = title;
+      document.getElementById('msg-content').textContent = msg;
+      document.getElementById('modal-msg').classList.remove('hidden');
+    }
+
+    // Run
+    init();
+
+  </script>
+</body>
+</html>
