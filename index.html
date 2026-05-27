@@ -122,9 +122,11 @@
             </div>
             
             <div id="signature-area">
-              <div class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden bg-white dark:bg-gray-100">
-                <canvas id="sig-canvas" class="w-full h-48 touch-none cursor-crosshair"></canvas>
-                <div id="sig-placeholder" class="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-400">請在此區域簽名</div>
+              <div id="signature-trigger" class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden bg-white dark:bg-gray-100 h-32 cursor-pointer flex items-center justify-center hover:bg-gray-50 transition-colors">
+                <img id="sig-display" class="hidden h-full object-contain pointer-events-none" />
+                <div id="sig-placeholder" class="text-gray-400 font-medium flex items-center">
+                  <i class="ph ph-pencil-simple text-xl mr-2"></i> 點擊此處開啟簽名板
+                </div>
               </div>
               <div class="flex justify-end mt-2">
                 <button id="btn-clear-sig" class="text-sm text-red-500 hover:text-red-700">清除重簽</button>
@@ -263,6 +265,48 @@
     </div>
   </div>
 
+  <!-- Signature Modal (Popup Landscape Canvas) -->
+  <div id="modal-signature" class="fixed inset-0 z-[80] hidden flex flex-col items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm fade-in">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl flex flex-col overflow-hidden shadow-2xl" style="height: 65vh; min-height: 350px;">
+      <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+        <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph ph-pencil-line text-xl"></i> 請在此簽名</h3>
+        <div class="flex gap-2">
+          <button id="btn-modal-clear-sig" class="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors">清除</button>
+          <button id="btn-modal-cancel-sig" class="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors">取消</button>
+          <button id="btn-modal-confirm-sig" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow transition-colors">完成</button>
+        </div>
+      </div>
+      <div class="flex-1 relative bg-white dark:bg-gray-100 touch-none">
+        <canvas id="modal-sig-canvas" class="absolute inset-0 w-full h-full cursor-crosshair touch-none"></canvas>
+      </div>
+      <div class="p-2 bg-gray-50 dark:bg-gray-900 text-center text-xs text-gray-500">
+        * 建議將手機橫向擺放以獲得更大的簽名空間
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit Confirm Modal (Date & Final Check) -->
+  <div id="modal-submit-confirm" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+      <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="text-xl font-bold flex items-center gap-2"><i class="ph ph-check-circle text-blue-600 text-2xl"></i> 確認送出</h3>
+      </div>
+      <div class="p-6 space-y-4 text-gray-700 dark:text-gray-300">
+        <p>即將送出本月份評核表。</p>
+        <div class="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+          <p class="font-bold text-blue-800 dark:text-blue-400">目前日期：<br/><span id="confirm-date-display" class="text-lg"></span></p>
+        </div>
+        <p class="text-sm text-red-500">* 送出後將無法修改，請確認所有填寫內容及簽名皆正確無誤。</p>
+      </div>
+      <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+        <button class="close-modal px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700">返回檢查</button>
+        <button id="btn-final-submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow flex items-center gap-2 transition-colors">
+          <i class="ph ph-paper-plane-right"></i> 確認送出
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -384,7 +428,8 @@
       adminToggleBtn: document.getElementById('btn-admin-toggle'),
       userSelect: document.getElementById('user-select'),
       questionsList: document.getElementById('questions-list'),
-      sigCanvas: document.getElementById('sig-canvas'),
+      sigTrigger: document.getElementById('signature-trigger'),
+      sigDisplay: document.getElementById('sig-display'),
       clearSigBtn: document.getElementById('btn-clear-sig'),
       submitBtn: document.getElementById('btn-submit'),
       adminMonthPicker: document.getElementById('admin-month-picker')
@@ -411,6 +456,7 @@
       els.userSelect.addEventListener('change', handleUserSelect);
       els.clearSigBtn.addEventListener('click', clearSignature);
       els.submitBtn.addEventListener('click', handleSubmit);
+      els.sigTrigger.addEventListener('click', openSignatureModal);
       els.adminMonthPicker.addEventListener('change', (e) => { selectedAdminMonth = e.target.value; fetchEvaluations(); });
 
       // Admin Tabs
@@ -435,8 +481,13 @@
       });
       document.getElementById('btn-add-user-confirm').addEventListener('click', handleAddUser);
 
-      // Setup Canvas
-      initSignaturePad();
+      // Signature & Submit Modals
+      document.getElementById('btn-modal-cancel-sig').addEventListener('click', () => {
+        document.getElementById('modal-signature').classList.add('hidden');
+      });
+      document.getElementById('btn-modal-clear-sig').addEventListener('click', clearModalSignature);
+      document.getElementById('btn-modal-confirm-sig').addEventListener('click', saveModalSignature);
+      document.getElementById('btn-final-submit').addEventListener('click', executeFinalSubmit);
 
       // Firebase Auth
       try {
@@ -643,36 +694,41 @@
     let isDrawing = false;
     let ctx;
     
-    function initSignaturePad() {
-      const canvas = els.sigCanvas;
-      const rect = canvas.getBoundingClientRect();
+    function openSignatureModal() {
+      const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
+      if(!isSubmissionPeriod) return;
+
+      document.getElementById('modal-signature').classList.remove('hidden');
+      
+      const canvas = document.getElementById('modal-sig-canvas');
+      const rect = canvas.parentElement.getBoundingClientRect();
       const scale = window.devicePixelRatio || 1;
-      // Fixed width/height for display via css, high-res internal
       canvas.width = rect.width * scale;
       canvas.height = rect.height * scale;
       ctx = canvas.getContext('2d');
       ctx.scale(scale, scale);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#000000'; // 固定為黑色，因簽名底色固定為亮色
+
+      isDrawing = false;
       
-      updateSigTheme();
-
-      canvas.addEventListener('mousedown', startDrawing);
-      canvas.addEventListener('mousemove', draw);
-      canvas.addEventListener('mouseup', stopDrawing);
-      canvas.addEventListener('mouseout', stopDrawing);
-      canvas.addEventListener('touchstart', startDrawing, {passive: false});
-      canvas.addEventListener('touchmove', draw, {passive: false});
-      canvas.addEventListener('touchend', stopDrawing);
-    }
-
-    function updateSigTheme() {
-      if(ctx) ctx.strokeStyle = document.documentElement.classList.contains('dark') ? '#ffffff' : '#000000';
+      if(!canvas.dataset.initialized) {
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing, {passive: false});
+        canvas.addEventListener('touchmove', draw, {passive: false});
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.dataset.initialized = "true";
+      }
     }
 
     function getCoords(e) {
-      const rect = els.sigCanvas.getBoundingClientRect();
+      const canvas = document.getElementById('modal-sig-canvas');
+      const rect = canvas.getBoundingClientRect();
       let clientX, clientY;
       if (e.touches && e.touches.length > 0) {
         clientX = e.touches[0].clientX;
@@ -685,11 +741,7 @@
     }
 
     function startDrawing(e) {
-      const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
-      if(!isSubmissionPeriod) return;
-      
       e.preventDefault();
-      document.getElementById('sig-placeholder').classList.add('hidden');
       const coords = getCoords(e);
       ctx.beginPath();
       ctx.moveTo(coords.x, coords.y);
@@ -707,16 +759,32 @@
     function stopDrawing() {
       if (isDrawing) {
         isDrawing = false;
-        state.signatureData = els.sigCanvas.toDataURL('image/png');
       }
     }
 
-    function clearSignature() {
-      if(!ctx) return;
-      const canvas = els.sigCanvas;
+    function clearModalSignature() {
+      const canvas = document.getElementById('modal-sig-canvas');
       ctx.clearRect(0, 0, canvas.width / (window.devicePixelRatio||1), canvas.height / (window.devicePixelRatio||1));
+    }
+
+    function saveModalSignature() {
+      const canvas = document.getElementById('modal-sig-canvas');
+      state.signatureData = canvas.toDataURL('image/png');
+      
+      els.sigDisplay.src = state.signatureData;
+      els.sigDisplay.classList.remove('hidden');
+      document.getElementById('sig-placeholder').classList.add('hidden');
+      
+      document.getElementById('modal-signature').classList.add('hidden');
+    }
+
+    function clearSignature() {
       state.signatureData = null;
-      document.getElementById('sig-placeholder').classList.remove('hidden');
+      if(els.sigDisplay) {
+        els.sigDisplay.src = "";
+        els.sigDisplay.classList.add('hidden');
+        document.getElementById('sig-placeholder').classList.remove('hidden');
+      }
     }
 
     // --- Database Interactions ---
@@ -731,13 +799,6 @@
         } else {
           const loadedUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
           state.users = loadedUsers;
-          
-          // Inject missing
-          initialUsers.forEach(async (initU) => {
-            if (!loadedUsers.find(lu => lu.id === initU.id)) {
-              await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', initU.id), initU);
-            }
-          });
           
           updateUI();
         }
@@ -777,8 +838,15 @@
       }
 
       if (!isComplete) return showMsg("提醒", "請確認所有題目皆已填寫完畢。");
-      if (!state.signatureData) return showMsg("提醒", "請完成電子簽名。");
+      if (!state.signatureData) return showMsg("提醒", "請點擊電子簽名區塊完成簽名。");
 
+      // Show Confirmation Modal with Date
+      document.getElementById('confirm-date-display').textContent = new Date().toLocaleString('zh-TW');
+      document.getElementById('modal-submit-confirm').classList.remove('hidden');
+    }
+
+    async function executeFinalSubmit() {
+      document.getElementById('modal-submit-confirm').classList.add('hidden');
       els.submitBtn.disabled = true;
       els.submitBtn.innerHTML = '<i class="ph ph-spinner animate-spin text-xl"></i> 資料傳送中...';
       
@@ -1015,7 +1083,6 @@
         docEl.classList.add('dark');
         document.getElementById('icon-theme').className = "ph ph-sun text-xl";
       }
-      updateSigTheme();
     }
 
     function showMsg(title, msg) {
