@@ -41,14 +41,13 @@
 
   <!-- Header -->
   <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 hidden" id="main-header">
-    <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <h1 class="text-xl font-bold tracking-wide">
-          不老松中清店 <span class="text-blue-600 dark:text-blue-400">員工評核</span>
+        <h1 class="text-xl font-bold tracking-wide leading-tight">
+          不老松中清店 <br class="sm:hidden" />
+          <span class="text-blue-600 dark:text-blue-400">員工自我評核</span>
         </h1>
-        <button id="btn-test-mode" class="text-xs px-2 py-1 rounded border text-gray-400 border-gray-200 dark:border-gray-700" title="開發者測試模式(無視日期限制)">
-          Test Mode
-        </button>
+        <span id="badge-test-mode" class="hidden text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-md font-bold border border-red-200">測試模式開啟中</span>
       </div>
       <div class="flex items-center gap-3">
         <button id="btn-theme" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
@@ -148,12 +147,17 @@
 
     <!-- === ADMIN VIEW === -->
     <div id="admin-view" class="space-y-6 hidden">
-      <div class="flex gap-2 p-1 bg-gray-200 dark:bg-gray-800 rounded-xl w-fit">
-        <button id="tab-records" class="admin-tab-btn active flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow">
-          <i class="ph ph-file-text"></i> 評核紀錄
-        </button>
-        <button id="tab-users" class="admin-tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-700/50">
-          <i class="ph ph-users"></i> 名單管理
+      <div class="flex justify-between items-center w-full">
+        <div class="flex gap-2 p-1 bg-gray-200 dark:bg-gray-800 rounded-xl w-fit">
+          <button id="tab-records" class="admin-tab-btn active flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow">
+            <i class="ph ph-file-text"></i> 評核紀錄
+          </button>
+          <button id="tab-users" class="admin-tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-700/50">
+            <i class="ph ph-users"></i> 名單管理
+          </button>
+        </div>
+        <button id="btn-test-mode" class="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border text-gray-500 border-gray-300 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="開發者測試模式(無視日期限制)">
+          <i class="ph ph-bug"></i> 測試模式 (OFF)
         </button>
       </div>
 
@@ -221,17 +225,14 @@
   </div>
 
   <!-- Message Modal -->
-  <div id="modal-msg" class="fixed inset-0 z-[90] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
-      <div class="p-6 border-b border-gray-100 dark:border-gray-700">
-        <h3 class="text-xl font-bold" id="msg-title">訊息</h3>
+  <div id="modal-msg" class="fixed inset-0 z-[90] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm fade-in">
+    <div id="msg-border-color" class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-8 border pop-in">
+      <div id="msg-icon-container" class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5">
+        <i id="msg-icon" class="text-5xl"></i>
       </div>
-      <div class="p-6">
-        <p class="text-lg whitespace-pre-line" id="msg-content"></p>
-      </div>
-      <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-        <button id="btn-msg-ok" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">了解</button>
-      </div>
+      <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-3" id="msg-title">訊息</h3>
+      <p class="text-gray-500 dark:text-gray-400 mb-8 whitespace-pre-line text-lg font-medium" id="msg-content"></p>
+      <button id="btn-msg-ok" class="w-full py-3 text-white rounded-xl font-bold text-lg shadow-lg transition-colors">了解</button>
     </div>
   </div>
 
@@ -300,8 +301,9 @@
           <button id="btn-modal-confirm-sig" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow transition-colors">完成</button>
         </div>
       </div>
-      <div class="flex-1 relative bg-white dark:bg-gray-100 touch-none">
-        <canvas id="modal-sig-canvas" class="absolute inset-0 w-full h-full cursor-crosshair touch-none"></canvas>
+      <!-- Added strict touch-action and overscroll-behavior styles to prevent LINE browser from hijacking touches -->
+      <div class="flex-1 relative bg-white dark:bg-gray-100 touch-none" style="overscroll-behavior: none;">
+        <canvas id="modal-sig-canvas" class="absolute inset-0 w-full h-full cursor-crosshair touch-none block" style="touch-action: none; -webkit-user-select: none; user-select: none;"></canvas>
       </div>
       <div class="p-2 bg-gray-50 dark:bg-gray-900 text-center text-xs text-gray-500">
         * 建議將手機橫向擺放以獲得更大的簽名空間
@@ -427,7 +429,7 @@
         { id: 'q1', text: '1. 對本月部門整體表現滿意嗎？', type: 'radio', options: ['滿意', '尚可', '有待加強', '不滿意'], requireSupplementIf: ['有待加強', '不滿意'] },
         { id: 'q2', text: '2. 現場無客時，如何安排員工動線與事務？(複選)', type: 'checkbox', options: ['督促補充備品', '帶領討論流程優化', '安排教育訓練', '處理客訴追蹤', '規劃行銷活動', '無特別安排'] },
         { id: 'q3', text: '3. 如何督促員工落實備品檢查？', type: 'radio', options: ['建立表單並親自抽查', '口頭提醒交接', '發生短缺時才處理', '未特別規範'] },
-        { id: 'q4', text: '4. 如何排解員工間的溝通問題？', type: 'radio', options: ['主動介入了解並協調', '讓他們自行解決', '只處理嚴重衝突'] },
+        { id: 'q4', text: '4. 如何排解員工間的溝通問題？', type: 'radio', options: ['主 মাস্টার介入了解並協調', '讓他們自行解決', '只處理嚴重衝突'] },
         { id: 'q5', text: '5. 跨區域(A上/A下/B區)協調管理成效？', type: 'radio', options: ['調度順暢，能互相補位', '偶有卡頓，尚可維持', '經常出現空窗期無人處理'] },
         { id: 'q6', text: '6. 如何提升團隊整體工作效率？', type: 'radio', options: ['建立標準SOP並落實', '依賴個別員工能力', '目前沒有特別方法'] },
         { id: 'q7', text: '7. 員工身體不適時的應變調度？(複選)', type: 'checkbox', options: ['立即安排休息並找人代班', '視現場狀況調整', '要求撐完當下工作'] },
@@ -578,8 +580,15 @@
     function updateUI() {
       const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
       
-      if (state.testMode) els.testModeBtn.className = "text-xs px-2 py-1 rounded border bg-red-100 text-red-600 border-red-300";
-      else els.testModeBtn.className = "text-xs px-2 py-1 rounded border text-gray-400 border-gray-200 dark:border-gray-700";
+      if (state.testMode) {
+        els.testModeBtn.className = "flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border bg-red-100 text-red-600 border-red-300 font-bold shadow-sm transition-colors";
+        els.testModeBtn.innerHTML = '<i class="ph ph-bug"></i> 測試模式 (ON)';
+        document.getElementById('badge-test-mode').classList.remove('hidden');
+      } else {
+        els.testModeBtn.className = "flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border text-gray-500 border-gray-300 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors";
+        els.testModeBtn.innerHTML = '<i class="ph ph-bug"></i> 測試模式 (OFF)';
+        document.getElementById('badge-test-mode').classList.add('hidden');
+      }
 
       if (!isSubmissionPeriod && !state.isAdminMode) document.getElementById('status-banner').classList.remove('hidden');
       else document.getElementById('status-banner').classList.add('hidden');
@@ -603,7 +612,7 @@
     function openCustomUserSelector() {
       const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
       if(!isSubmissionPeriod) {
-        return showMsg("提醒", "目前非評核開放時間 (每月 20~25 號)。\n※ 若需測試，請點擊右上角的「Test Mode」。");
+        return showMsg("提醒", "目前非評核開放時間\n(系統僅於每月 20~25 號開放)");
       }
       
       const container = document.getElementById('custom-user-list-container');
@@ -776,29 +785,25 @@
       });
     }
 
-    // --- Signature Pad Logic ---
+    // --- Signature Pad Logic (Upgraded to Pointer Events for LINE Webview) ---
     let isDrawing = false;
     let ctx;
     
     function initSignatureCanvas() {
       const canvas = document.getElementById('modal-sig-canvas');
-      // 使用 offsetWidth 取得絕對不受動畫 scale 影響的純 CSS 佈局寬高
       const w = canvas.offsetWidth;
       const h = canvas.offsetHeight;
       
-      // 如果彈跳視窗仍在載入初期尺寸尚未成形，則稍後重試
       if (w === 0 || h === 0) {
         setTimeout(initSignatureCanvas, 50);
         return;
       }
       
       const dpr = window.devicePixelRatio || 1;
-      // 設定畫布實際像素為 佈局像素 × 設備像素比
       canvas.width = w * dpr;
       canvas.height = h * dpr;
       
       ctx = canvas.getContext('2d');
-      // 設定繪圖上下文比例對齊設備像素
       ctx.scale(dpr, dpr);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -806,13 +811,12 @@
       ctx.strokeStyle = '#000000';
       
       if(!canvas.dataset.initialized) {
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
-        canvas.addEventListener('touchstart', startDrawing, {passive: false});
-        canvas.addEventListener('touchmove', draw, {passive: false});
-        canvas.addEventListener('touchend', stopDrawing);
+        // 使用現代 Pointer Events 取代原有的 Mouse/Touch
+        canvas.addEventListener('pointerdown', startDrawing);
+        canvas.addEventListener('pointermove', draw);
+        canvas.addEventListener('pointerup', stopDrawing);
+        canvas.addEventListener('pointerout', stopDrawing);
+        canvas.addEventListener('pointercancel', stopDrawing); // 重要：防止被系統手勢打斷
         canvas.dataset.initialized = "true";
       }
     }
@@ -820,41 +824,54 @@
     function openSignatureModal() {
       const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
       if(!isSubmissionPeriod) {
-         return showMsg("提醒", "目前非評核開放時間 (每月 20~25 號)。\n※ 若需測試，請點擊右上角的「Test Mode」。");
+         return showMsg("提醒", "目前非評核開放時間\n(系統僅於每月 20~25 號開放)");
       }
 
       document.getElementById('modal-signature').classList.remove('hidden');
       isDrawing = false;
-      // 確保顯示後再取得 Canvas 的確切尺寸
       setTimeout(initSignatureCanvas, 50);
     }
 
+    // Pointer Events 將 clientX/clientY 統一化，因此不需要去拆解 touches 陣列了
     function getCoords(e) {
       const canvas = document.getElementById('modal-sig-canvas');
       const rect = canvas.getBoundingClientRect();
-      let clientX, clientY;
       
-      if (e.changedTouches && e.changedTouches.length > 0) {
-        clientX = e.changedTouches[0].clientX;
-        clientY = e.changedTouches[0].clientY;
-      } else if (e.touches && e.touches.length > 0) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
-      
-      // 計算實際點擊位置在畫布上的相對百分比，再乘上邏輯寬高 (無視外層彈跳視窗的 scale 動畫)
-      const x = (clientX - rect.left) / (rect.width || 1) * canvas.offsetWidth;
-      const y = (clientY - rect.top) / (rect.height || 1) * canvas.offsetHeight;
+      const x = (e.clientX - rect.left) / (rect.width || 1) * canvas.offsetWidth;
+      const y = (e.clientY - rect.top) / (rect.height || 1) * canvas.offsetHeight;
 
       return { x, y };
     }
 
-    function startDrawing(e) { e.preventDefault(); const coords = getCoords(e); ctx.beginPath(); ctx.moveTo(coords.x, coords.y); isDrawing = true; }
-    function draw(e) { if (!isDrawing) return; e.preventDefault(); const coords = getCoords(e); ctx.lineTo(coords.x, coords.y); ctx.stroke(); }
-    function stopDrawing() { if (isDrawing) isDrawing = false; }
+    function startDrawing(e) { 
+      e.preventDefault(); 
+      // 關鍵！鎖定指標，確保手指就算滑出邊界一點點，事件仍會傳遞給 canvas
+      if(e.pointerId) {
+        try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
+      }
+      const coords = getCoords(e); 
+      ctx.beginPath(); 
+      ctx.moveTo(coords.x, coords.y); 
+      isDrawing = true; 
+    }
+    
+    function draw(e) { 
+      if (!isDrawing) return; 
+      e.preventDefault(); 
+      const coords = getCoords(e); 
+      ctx.lineTo(coords.x, coords.y); 
+      ctx.stroke(); 
+    }
+    
+    function stopDrawing(e) { 
+      if (isDrawing) {
+        isDrawing = false; 
+        if(e && e.pointerId) {
+          try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
+        }
+      }
+    }
+    
     function clearModalSignature() { const canvas = document.getElementById('modal-sig-canvas'); ctx.clearRect(0, 0, canvas.width, canvas.height); }
     function saveModalSignature() {
       const canvas = document.getElementById('modal-sig-canvas');
@@ -889,7 +906,6 @@
       }, (err) => console.error(err));
     }
 
-    // 將原本的 fetchEvaluations 替換為即時監聽機制，用於過濾已填寫人員與管理員列表更新
     function setupEvaluationsListener() {
       const evalRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'evaluations');
       onSnapshot(evalRef, (snapshot) => {
@@ -907,7 +923,7 @@
 
     async function handleSubmit() {
       const isSubmissionPeriod = state.testMode || (today.getDate() >= 20 && today.getDate() <= 25);
-      if (!isSubmissionPeriod) return showMsg("提醒", "目前非評核開放時間 (每月 20~25 號)。\n※ 若需測試，請點擊右上角的「Test Mode」。");
+      if (!isSubmissionPeriod) return showMsg("提醒", "目前非評核開放時間\n(系統僅於每月 20~25 號開放)");
       if (!state.selectedUserId) return showMsg("提醒", "請先選擇您的姓名");
       
       let isComplete = true;
@@ -1233,9 +1249,44 @@
         document.getElementById('icon-theme').className = "ph ph-sun text-xl";
       }
     }
-    function showMsg(title, msg) {
+
+    function showMsg(title, msg, type = 'info') {
       document.getElementById('msg-title').textContent = title;
       document.getElementById('msg-content').textContent = msg;
+
+      const border = document.getElementById('msg-border-color');
+      const iconContainer = document.getElementById('msg-icon-container');
+      const icon = document.getElementById('msg-icon');
+      const btn = document.getElementById('btn-msg-ok');
+
+      // 移除先前的顏色樣式
+      border.className = "bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-8 border pop-in";
+      iconContainer.className = "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5";
+      btn.className = "w-full py-3 text-white rounded-xl font-bold text-lg shadow-lg transition-colors";
+
+      // 根據標題或類型切換圖示與顏色
+      if (type === 'warning' || title.includes('提醒')) {
+        border.classList.add('border-amber-100', 'dark:border-amber-900');
+        iconContainer.classList.add('bg-amber-100', 'dark:bg-amber-900/30');
+        icon.className = "ph ph-warning-circle text-5xl text-amber-500";
+        btn.classList.add('bg-amber-500', 'hover:bg-amber-600');
+      } else if (type === 'error' || title.includes('錯誤') || title.includes('失敗')) {
+        border.classList.add('border-red-100', 'dark:border-red-900');
+        iconContainer.classList.add('bg-red-100', 'dark:bg-red-900/30');
+        icon.className = "ph ph-x-circle text-5xl text-red-500";
+        btn.classList.add('bg-red-500', 'hover:bg-red-600');
+      } else if (type === 'success' || title.includes('成功')) {
+        border.classList.add('border-green-100', 'dark:border-green-900');
+        iconContainer.classList.add('bg-green-100', 'dark:bg-green-900/30');
+        icon.className = "ph ph-check-circle text-5xl text-green-500";
+        btn.classList.add('bg-green-500', 'hover:bg-green-600');
+      } else {
+        border.classList.add('border-blue-100', 'dark:border-blue-900');
+        iconContainer.classList.add('bg-blue-100', 'dark:bg-blue-900/30');
+        icon.className = "ph ph-info text-5xl text-blue-500";
+        btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+      }
+
       document.getElementById('modal-msg').classList.remove('hidden');
     }
 
