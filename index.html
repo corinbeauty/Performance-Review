@@ -33,9 +33,9 @@
 
   <!-- Loading Screen -->
   <div id="loading-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-    <div class="text-xl font-bold flex items-center gap-2">
-      <i class="ph ph-spinner animate-spin text-blue-600 text-2xl"></i>
-      載入系統中...
+    <div class="text-xl font-bold flex flex-col items-center gap-4 text-gray-800 dark:text-gray-200">
+      <i class="ph ph-spinner animate-spin text-blue-600 text-4xl"></i>
+      <span id="loading-text">載入系統中...</span>
     </div>
   </div>
 
@@ -47,14 +47,14 @@
           不老松中清店 <br class="sm:hidden" />
           <span class="text-blue-600 dark:text-blue-400">員工自我評核</span>
         </h1>
-        <span id="badge-test-mode" class="hidden text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-md font-bold border border-red-200">測試模式開啟中</span>
+        <span id="badge-test-mode" class="hidden text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-md font-bold border border-red-200 whitespace-nowrap">測試模式</span>
       </div>
       <div class="flex items-center gap-3">
         <button id="btn-theme" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
           <i class="ph ph-moon text-xl" id="icon-theme"></i>
         </button>
-        <button id="btn-admin-toggle" class="flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors">
-          <i class="ph ph-lock text-base"></i> <span id="text-admin-toggle">店長管理</span>
+        <button id="btn-admin-toggle" class="flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+          <i class="ph ph-lock text-base"></i> <span id="text-admin-toggle" class="hidden sm:inline">店長管理</span>
         </button>
       </div>
     </div>
@@ -66,11 +66,11 @@
     <div id="user-view" class="space-y-6">
       
       <!-- Status Banner -->
-      <div id="status-banner" class="hidden bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-xl flex items-center gap-3 shadow-sm">
-        <i class="ph ph-warning-circle text-2xl shrink-0"></i>
+      <div id="status-banner" class="hidden bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-xl flex items-start sm:items-center gap-3 shadow-sm">
+        <i class="ph ph-warning-circle text-2xl shrink-0 mt-0.5 sm:mt-0"></i>
         <div>
           <p class="font-bold">目前非評核開放時間</p>
-          <p class="text-sm">系統開放時間為每月 20 號至 25 號，目前暫停填寫。 (<span id="banner-date"></span>)</p>
+          <p class="text-sm mt-1" id="banner-desc">系統開放時間為每月 20 號至 25 號，目前暫停填寫。</p>
         </div>
       </div>
 
@@ -147,7 +147,7 @@
 
     <!-- === ADMIN VIEW === -->
     <div id="admin-view" class="space-y-6 hidden">
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-4">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-4">
         <div class="flex gap-2 p-1 bg-gray-200 dark:bg-gray-800 rounded-xl w-fit">
           <button id="tab-records" class="admin-tab-btn active flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow">
             <i class="ph ph-file-text"></i> 評核紀錄
@@ -156,9 +156,9 @@
             <i class="ph ph-users"></i> 名單管理
           </button>
         </div>
-        <div class="flex items-center gap-2">
-          <button id="btn-temp-open" class="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border text-gray-500 border-gray-300 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="全域臨時開放填寫">
-            <i class="ph ph-lock-key"></i> 臨時開放 (OFF)
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btn-temp-open" class="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border text-gray-500 border-gray-300 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="設定全域臨時開放區間">
+            <i class="ph ph-lock-key"></i> 臨時開放 (設定)
           </button>
           <button id="btn-test-mode" class="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border text-gray-500 border-gray-300 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="開發者測試模式(僅限本機)">
             <i class="ph ph-bug"></i> 測試模式 (OFF)
@@ -197,6 +197,34 @@
   </main>
 
   <!-- === MODALS === -->
+
+  <!-- Temp Open Modal (NEW) -->
+  <div id="modal-temp-open" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-xl font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2"><i class="ph ph-clock"></i> 臨時開放區間設定</h3>
+        <button class="close-modal text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+      </div>
+      <div class="p-6 space-y-5">
+        <p class="text-sm text-gray-500 dark:text-gray-400">請設定允許員工在此額外區間內填寫評核。設定後系統將自動依據此時段開放與關閉。</p>
+        <div>
+          <label class="block text-sm font-medium mb-1">開始時間</label>
+          <input type="datetime-local" id="temp-open-start" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">結束時間</label>
+          <input type="datetime-local" id="temp-open-end" class="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+      <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
+        <button id="btn-clear-temp-open" class="px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-sm font-bold">強制關閉</button>
+        <div class="flex gap-2">
+          <button class="close-modal px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm">取消</button>
+          <button id="btn-save-temp-open" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow text-sm font-bold">儲存區間</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Custom User Select Modal -->
   <div id="modal-custom-user-select" class="fixed inset-0 z-[70] hidden flex flex-col justify-end sm:justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm fade-in">
@@ -433,7 +461,7 @@
         { id: 'q1', text: '1. 對本月部門整體表現滿意嗎？', type: 'radio', options: ['滿意', '尚可', '有待加強', '不滿意'], requireSupplementIf: ['有待加強', '不滿意'] },
         { id: 'q2', text: '2. 現場無客時，如何安排員工動線與事務？(複選)', type: 'checkbox', options: ['督促補充備品', '帶領討論流程優化', '安排教育訓練', '處理客訴追蹤', '規劃行銷活動', '無特別安排'] },
         { id: 'q3', text: '3. 如何督促員工落實備品檢查？', type: 'radio', options: ['建立表單並親自抽查', '口頭提醒交接', '發生短缺時才處理', '未特別規範'] },
-        { id: 'q4', text: '4. 如何排解員工間的溝通問題？', type: 'radio', options: ['主 মাস্টার動介入了解並協調', '讓他們自行解決', '只處理嚴重衝突'] },
+        { id: 'q4', text: '4. 如何排解員工間的溝通問題？', type: 'radio', options: ['主動介入了解並協調', '讓他們自行解決', '只處理嚴重衝突'] },
         { id: 'q5', text: '5. 跨區域(A上/A下/B區)協調管理成效？', type: 'radio', options: ['調度順暢，能互相補位', '偶有卡頓，尚可維持', '經常出現空窗期無人處理'] },
         { id: 'q6', text: '6. 如何提升團隊整體工作效率？', type: 'radio', options: ['建立標準SOP並落實', '依賴個別員工能力', '目前沒有特別方法'] },
         { id: 'q7', text: '7. 員工身體不適時的應變調度？(複選)', type: 'checkbox', options: ['立即安排休息並找人代班', '視現場狀況調整', '要求撐完當下工作'] },
@@ -467,7 +495,8 @@
       signatureData: null,
       isAdminMode: false,
       testMode: false,
-      tempOpen: false, // 紀錄後台是否臨時開放填寫
+      tempOpenStart: null, // 臨時開放開始時間 (ISO String)
+      tempOpenEnd: null,   // 臨時開放結束時間 (ISO String)
       isSubmitting: false,
       adminTab: 'records',
       deleteTarget: null
@@ -493,15 +522,41 @@
       submitBtn: document.getElementById('btn-submit'),
       adminMonthPicker: document.getElementById('admin-month-picker')
     };
+    
+    // 將 Date 轉為本地 datetime-local 可吃的格式 (YYYY-MM-DDThh:mm)
+    function toDatetimeLocal(date) {
+      const pad = n => n.toString().padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
 
-    // --- Check if it is valid submission period ---
+    // 檢查是否為可填寫期間
     function checkIsSubmissionPeriod() {
-      // 1. 測試模式(本機) 2. 全域臨時開放(Firebase) 3. 正常時間 20~25號
-      return state.testMode || state.tempOpen || (today.getDate() >= 20 && today.getDate() <= 25);
+      const now = new Date();
+      // 1. 本機測試模式
+      if (state.testMode) return true;
+      
+      // 2. 正常時間 (每月 20 號至 25 號)
+      if (now.getDate() >= 20 && now.getDate() <= 25) return true;
+      
+      // 3. 臨時開放區間
+      if (state.tempOpenStart && state.tempOpenEnd) {
+        const start = new Date(state.tempOpenStart);
+        const end = new Date(state.tempOpenEnd);
+        if (now >= start && now <= end) return true;
+      }
+      return false;
     }
 
     // --- Init ---
     async function init() {
+      // 避免卡在Loading畫面：設定10秒強制Timeout
+      const loadingTimeout = setTimeout(() => {
+        document.getElementById('loading-screen').classList.add('hidden');
+        if (!auth.currentUser) {
+            showMsg("警告", "系統連線逾時或權限異常，部分功能可能無法正常運作。");
+        }
+      }, 10000);
+
       // Theme setup
       if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.documentElement.classList.add('dark');
@@ -511,21 +566,60 @@
       document.getElementById('sig-date').textContent = today.toLocaleDateString('zh-TW');
       document.getElementById('sig-month').textContent = currentMonthStr;
       document.getElementById('q-month-display').textContent = currentMonthStr;
-      document.getElementById('banner-date').textContent = today.toLocaleDateString('zh-TW');
       els.adminMonthPicker.value = currentMonthStr;
 
       // Event Listeners
       els.themeBtn.addEventListener('click', toggleTheme);
       els.testModeBtn.addEventListener('click', () => { state.testMode = !state.testMode; updateUI(); });
       
-      // 臨時開放填寫 (更新至資料庫)
-      els.tempOpenBtn.addEventListener('click', async () => {
+      // 開啟臨時開放設定 Modal
+      els.tempOpenBtn.addEventListener('click', () => {
+        if (state.tempOpenStart) {
+          document.getElementById('temp-open-start').value = toDatetimeLocal(new Date(state.tempOpenStart));
+        } else {
+          document.getElementById('temp-open-start').value = toDatetimeLocal(new Date());
+        }
+        
+        if (state.tempOpenEnd) {
+          document.getElementById('temp-open-end').value = toDatetimeLocal(new Date(state.tempOpenEnd));
+        } else {
+          const d = new Date();
+          d.setHours(d.getHours() + 24); // 預設 24 小時後
+          document.getElementById('temp-open-end').value = toDatetimeLocal(d);
+        }
+        document.getElementById('modal-temp-open').classList.remove('hidden');
+      });
+
+      // 儲存臨時開放區間
+      document.getElementById('btn-save-temp-open').addEventListener('click', async () => {
+        const start = document.getElementById('temp-open-start').value;
+        const end = document.getElementById('temp-open-end').value;
+        
+        if (!start || !end) return showMsg("錯誤", "請選擇完整的開始與結束時間");
+        if (new Date(start) >= new Date(end)) return showMsg("錯誤", "結束時間必須大於開始時間");
+
         try {
-          const newVal = !state.tempOpen;
-          await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'system'), { tempOpen: newVal }, { merge: true });
-          showMsg("成功", newVal ? "已為所有員工開啟臨時填寫權限！" : "已關閉臨時填寫權限！", "success");
+          await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'system'), { 
+            tempOpenStart: new Date(start).toISOString(), 
+            tempOpenEnd: new Date(end).toISOString()
+          }, { merge: true });
+          document.getElementById('modal-temp-open').classList.add('hidden');
+          showMsg("成功", "已成功設定臨時開放區間！", "success");
         } catch(err) {
-          console.error(err);
+          showMsg("錯誤", "設定更新失敗，請檢查權限", "error");
+        }
+      });
+
+      // 強制關閉臨時開放
+      document.getElementById('btn-clear-temp-open').addEventListener('click', async () => {
+        try {
+          await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'system'), { 
+            tempOpenStart: null, 
+            tempOpenEnd: null 
+          }, { merge: true });
+          document.getElementById('modal-temp-open').classList.add('hidden');
+          showMsg("成功", "已關閉並清除臨時開放設定！", "success");
+        } catch(err) {
           showMsg("錯誤", "設定更新失敗，請檢查權限", "error");
         }
       });
@@ -578,7 +672,7 @@
         document.getElementById('modal-success').classList.add('hidden');
       });
 
-      // Firebase Auth
+      // Firebase Auth (加上完整的 Error Catch)
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
@@ -586,12 +680,17 @@
           await signInAnonymously(auth);
         }
       } catch (err) {
+        clearTimeout(loadingTimeout); // 發生錯誤時直接解除倒數
         console.error("Auth Error:", err);
-        showMsg("錯誤", "資料庫連線失敗，請重整網頁。");
+        document.getElementById('loading-screen').classList.add('hidden');
+        document.getElementById('main-header').classList.remove('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        showMsg("連線錯誤", "無法連接至資料庫，請檢查您的網路或重新整理網頁。");
       }
 
       onAuthStateChanged(auth, (user) => {
         if (user) {
+          clearTimeout(loadingTimeout); // 成功登入，解除 Timeout
           document.getElementById('loading-screen').classList.add('hidden');
           document.getElementById('main-header').classList.remove('hidden');
           document.getElementById('main-content').classList.remove('hidden');
@@ -605,6 +704,7 @@
     // --- Core UI Updates ---
     function updateUI() {
       const isSubmissionPeriod = checkIsSubmissionPeriod();
+      const now = new Date();
       
       // 測試模式 UI
       if (state.testMode) {
@@ -617,18 +717,43 @@
         document.getElementById('badge-test-mode').classList.add('hidden');
       }
 
-      // 臨時開放填寫 UI
-      if (state.tempOpen) {
-        els.tempOpenBtn.className = "flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border bg-green-100 text-green-600 border-green-300 font-bold shadow-sm transition-colors";
-        els.tempOpenBtn.innerHTML = '<i class="ph ph-lock-key-open"></i> 臨時開放 (ON)';
-      } else {
-        els.tempOpenBtn.className = "flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border text-gray-500 border-gray-300 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors";
-        els.tempOpenBtn.innerHTML = '<i class="ph ph-lock-key"></i> 臨時開放 (OFF)';
+      // 檢查是否正在臨時開放區間內
+      let isTempOpenActive = false;
+      let isTempOpenScheduled = false;
+      if (state.tempOpenStart && state.tempOpenEnd) {
+        const start = new Date(state.tempOpenStart);
+        const end = new Date(state.tempOpenEnd);
+        if (now >= start && now <= end) {
+           isTempOpenActive = true;
+        } else if (start > now) {
+           isTempOpenScheduled = true;
+        }
       }
 
-      // 狀態列
-      if (!isSubmissionPeriod && !state.isAdminMode) document.getElementById('status-banner').classList.remove('hidden');
-      else document.getElementById('status-banner').classList.add('hidden');
+      // 臨時開放按鈕 UI 更新
+      if (isTempOpenActive) {
+        els.tempOpenBtn.className = "flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border bg-green-100 text-green-600 border-green-300 font-bold shadow-sm transition-colors";
+        els.tempOpenBtn.innerHTML = '<i class="ph ph-lock-key-open"></i> 臨時開放 (開放中)';
+      } else if (isTempOpenScheduled) {
+        els.tempOpenBtn.className = "flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border bg-blue-100 text-blue-600 border-blue-300 font-bold shadow-sm transition-colors";
+        els.tempOpenBtn.innerHTML = '<i class="ph ph-clock"></i> 臨時開放 (已排程)';
+      } else {
+        els.tempOpenBtn.className = "flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border text-gray-500 border-gray-300 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors";
+        els.tempOpenBtn.innerHTML = '<i class="ph ph-lock-key"></i> 臨時開放 (設定)';
+      }
+
+      // 狀態提示列 (目前非評核時間的橫幅)
+      if (!isSubmissionPeriod && !state.isAdminMode) {
+        document.getElementById('status-banner').classList.remove('hidden');
+        if (isTempOpenScheduled) {
+           const startStr = new Date(state.tempOpenStart).toLocaleString('zh-TW', {month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'});
+           document.getElementById('banner-desc').textContent = `正常開放為每月20至25號。下次店長排定開放時間為：${startStr}`;
+        } else {
+           document.getElementById('banner-desc').textContent = `系統開放時間為每月 20 號至 25 號，目前暫停填寫。`;
+        }
+      } else {
+        document.getElementById('status-banner').classList.add('hidden');
+      }
 
       // 切換管理者或一般使用者檢視
       if (state.isAdminMode) {
@@ -951,14 +1076,17 @@
       }, (err) => console.error("Eval Error:", err));
     }
 
-    // 新增：監聽全域設定
+    // 監聽全域設定 (針對日期區間開放)
     function setupSettingsListener() {
       const settingsRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'system');
       onSnapshot(settingsRef, (docSnap) => {
         if (docSnap.exists()) {
-          state.tempOpen = docSnap.data().tempOpen === true;
+          const data = docSnap.data();
+          state.tempOpenStart = data.tempOpenStart || null;
+          state.tempOpenEnd = data.tempOpenEnd || null;
         } else {
-          state.tempOpen = false;
+          state.tempOpenStart = null;
+          state.tempOpenEnd = null;
         }
         updateUI(); 
       }, (err) => console.error("Settings Error:", err));
@@ -1290,7 +1418,7 @@
       iconContainer.className = "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5";
       btn.className = "w-full py-3 text-white rounded-xl font-bold text-lg shadow-lg transition-colors";
 
-      if (type === 'warning' || title.includes('提醒')) {
+      if (type === 'warning' || title.includes('提醒') || title.includes('警告')) {
         border.classList.add('border-amber-100', 'dark:border-amber-900');
         iconContainer.classList.add('bg-amber-100', 'dark:bg-amber-900/30');
         icon.className = "ph ph-warning-circle text-5xl text-amber-500";
