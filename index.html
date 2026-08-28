@@ -80,7 +80,6 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium mb-2">請選擇您的姓名與職務</label>
-            <!-- Custom Styled Select Trigger -->
             <div id="custom-user-select-trigger" class="w-full p-4 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 cursor-pointer flex justify-between items-center transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
               <span id="custom-user-select-text" class="text-gray-500 font-medium">-- 點擊選擇人員 --</span>
               <i class="ph ph-caret-down text-gray-400"></i>
@@ -193,12 +192,11 @@
         </div>
       </div>
     </div>
-
   </main>
 
   <!-- === MODALS === -->
 
-  <!-- Temp Open Modal (NEW) -->
+  <!-- Temp Open Modal -->
   <div id="modal-temp-open" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
       <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
@@ -337,9 +335,7 @@
       <div class="flex-1 relative bg-white dark:bg-gray-100 touch-none" style="overscroll-behavior: none;">
         <canvas id="modal-sig-canvas" class="absolute inset-0 w-full h-full cursor-crosshair touch-none block" style="touch-action: none; -webkit-user-select: none; user-select: none;"></canvas>
       </div>
-      <div class="p-2 bg-gray-50 dark:bg-gray-900 text-center text-xs text-gray-500">
-         
-      </div>
+      <div class="p-2 bg-gray-50 dark:bg-gray-900 text-center text-xs text-gray-500"></div>
     </div>
   </div>
 
@@ -495,8 +491,8 @@
       signatureData: null,
       isAdminMode: false,
       testMode: false,
-      tempOpenStart: null, // 臨時開放開始時間 (ISO String)
-      tempOpenEnd: null,   // 臨時開放結束時間 (ISO String)
+      tempOpenStart: null,
+      tempOpenEnd: null,  
       isSubmitting: false,
       adminTab: 'records',
       deleteTarget: null
@@ -523,22 +519,16 @@
       adminMonthPicker: document.getElementById('admin-month-picker')
     };
     
-    // 將 Date 轉為本地 datetime-local 可吃的格式 (YYYY-MM-DDThh:mm)
     function toDatetimeLocal(date) {
       const pad = n => n.toString().padStart(2, '0');
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
 
-    // 檢查是否為可填寫期間
     function checkIsSubmissionPeriod() {
       const now = new Date();
-      // 1. 本機測試模式
       if (state.testMode) return true;
-      
-      // 2. 正常時間 (每月 20 號至 25 號)
       if (now.getDate() >= 20 && now.getDate() <= 25) return true;
       
-      // 3. 臨時開放區間
       if (state.tempOpenStart && state.tempOpenEnd) {
         const start = new Date(state.tempOpenStart);
         const end = new Date(state.tempOpenEnd);
@@ -549,7 +539,6 @@
 
     // --- Init ---
     async function init() {
-      // 避免卡在Loading畫面：設定10秒強制Timeout
       const loadingTimeout = setTimeout(() => {
         document.getElementById('loading-screen').classList.add('hidden');
         if (!auth.currentUser) {
@@ -557,12 +546,10 @@
         }
       }, 10000);
 
-      // Theme setup
       if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.documentElement.classList.add('dark');
       }
       
-      // Date displays
       document.getElementById('sig-date').textContent = today.toLocaleDateString('zh-TW');
       document.getElementById('sig-month').textContent = currentMonthStr;
       document.getElementById('q-month-display').textContent = currentMonthStr;
@@ -572,7 +559,6 @@
       els.themeBtn.addEventListener('click', toggleTheme);
       els.testModeBtn.addEventListener('click', () => { state.testMode = !state.testMode; updateUI(); });
       
-      // 開啟臨時開放設定 Modal
       els.tempOpenBtn.addEventListener('click', () => {
         if (state.tempOpenStart) {
           document.getElementById('temp-open-start').value = toDatetimeLocal(new Date(state.tempOpenStart));
@@ -584,13 +570,12 @@
           document.getElementById('temp-open-end').value = toDatetimeLocal(new Date(state.tempOpenEnd));
         } else {
           const d = new Date();
-          d.setHours(d.getHours() + 24); // 預設 24 小時後
+          d.setHours(d.getHours() + 24);
           document.getElementById('temp-open-end').value = toDatetimeLocal(d);
         }
         document.getElementById('modal-temp-open').classList.remove('hidden');
       });
 
-      // 儲存臨時開放區間
       document.getElementById('btn-save-temp-open').addEventListener('click', async () => {
         const start = document.getElementById('temp-open-start').value;
         const end = document.getElementById('temp-open-end').value;
@@ -610,7 +595,6 @@
         }
       });
 
-      // 強制關閉臨時開放
       document.getElementById('btn-clear-temp-open').addEventListener('click', async () => {
         try {
           await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'system'), { 
@@ -640,26 +624,25 @@
         }
       });
 
-      // Admin Tabs
       document.getElementById('tab-records').addEventListener('click', () => switchAdminTab('records'));
       document.getElementById('tab-users').addEventListener('click', () => switchAdminTab('users'));
 
-      // Modals bindings
       document.querySelectorAll('.close-modal').forEach(btn => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('[id^="modal-"]').forEach(m => m.classList.add('hidden'));
         });
       });
+      
       document.getElementById('btn-login-confirm').addEventListener('click', confirmLogin);
       document.getElementById('admin-password').addEventListener('keydown', (e) => e.key === 'Enter' && confirmLogin());
       document.getElementById('btn-msg-ok').addEventListener('click', () => document.getElementById('modal-msg').classList.add('hidden'));
+      
+      // 這裡就是遺失的事件綁定！
       document.getElementById('btn-delete-confirm').addEventListener('click', handleDeleteUser);
       
-      // User Form (Add/Edit)
       document.getElementById('btn-add-user-modal').addEventListener('click', () => openUserForm('add'));
       document.getElementById('btn-user-form-confirm').addEventListener('click', handleSaveUserForm);
 
-      // Signature & Submit Modals
       document.getElementById('btn-modal-cancel-sig').addEventListener('click', () => {
         document.getElementById('modal-signature').classList.add('hidden');
       });
@@ -667,12 +650,10 @@
       document.getElementById('btn-modal-confirm-sig').addEventListener('click', saveModalSignature);
       document.getElementById('btn-final-submit').addEventListener('click', executeFinalSubmit);
       
-      // Success Modal
       document.getElementById('btn-success-ok').addEventListener('click', () => {
         document.getElementById('modal-success').classList.add('hidden');
       });
 
-      // Firebase Auth (加上完整的 Error Catch)
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
@@ -680,7 +661,7 @@
           await signInAnonymously(auth);
         }
       } catch (err) {
-        clearTimeout(loadingTimeout); // 發生錯誤時直接解除倒數
+        clearTimeout(loadingTimeout); 
         console.error("Auth Error:", err);
         document.getElementById('loading-screen').classList.add('hidden');
         document.getElementById('main-header').classList.remove('hidden');
@@ -690,13 +671,13 @@
 
       onAuthStateChanged(auth, (user) => {
         if (user) {
-          clearTimeout(loadingTimeout); // 成功登入，解除 Timeout
+          clearTimeout(loadingTimeout);
           document.getElementById('loading-screen').classList.add('hidden');
           document.getElementById('main-header').classList.remove('hidden');
           document.getElementById('main-content').classList.remove('hidden');
           fetchUsers();
           setupEvaluationsListener();
-          setupSettingsListener(); // 載入全域設定
+          setupSettingsListener(); 
         }
       });
     }
@@ -706,7 +687,6 @@
       const isSubmissionPeriod = checkIsSubmissionPeriod();
       const now = new Date();
       
-      // 測試模式 UI
       if (state.testMode) {
         els.testModeBtn.className = "flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border bg-red-100 text-red-600 border-red-300 font-bold shadow-sm transition-colors";
         els.testModeBtn.innerHTML = '<i class="ph ph-bug"></i> 測試模式 (ON)';
@@ -717,7 +697,6 @@
         document.getElementById('badge-test-mode').classList.add('hidden');
       }
 
-      // 檢查是否正在臨時開放區間內
       let isTempOpenActive = false;
       let isTempOpenScheduled = false;
       if (state.tempOpenStart && state.tempOpenEnd) {
@@ -730,7 +709,6 @@
         }
       }
 
-      // 臨時開放按鈕 UI 更新
       if (isTempOpenActive) {
         els.tempOpenBtn.className = "flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border bg-green-100 text-green-600 border-green-300 font-bold shadow-sm transition-colors";
         els.tempOpenBtn.innerHTML = '<i class="ph ph-lock-key-open"></i> 臨時開放 (開放中)';
@@ -742,7 +720,6 @@
         els.tempOpenBtn.innerHTML = '<i class="ph ph-lock-key"></i> 臨時開放 (設定)';
       }
 
-      // 狀態提示列 (目前非評核時間的橫幅)
       if (!isSubmissionPeriod && !state.isAdminMode) {
         document.getElementById('status-banner').classList.remove('hidden');
         if (isTempOpenScheduled) {
@@ -755,7 +732,6 @@
         document.getElementById('status-banner').classList.add('hidden');
       }
 
-      // 切換管理者或一般使用者檢視
       if (state.isAdminMode) {
         document.getElementById('user-view').classList.add('hidden');
         document.getElementById('admin-view').classList.remove('hidden');
@@ -1076,7 +1052,6 @@
       }, (err) => console.error("Eval Error:", err));
     }
 
-    // 監聽全域設定 (針對日期區間開放)
     function setupSettingsListener() {
       const settingsRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'system');
       onSnapshot(settingsRef, (docSnap) => {
@@ -1324,6 +1299,19 @@
       document.querySelectorAll('.btn-edit-user').forEach(btn => {
         btn.addEventListener('click', (e) => { openUserForm('edit', e.currentTarget.dataset.id); });
       });
+    }
+
+    // --- 加入遺失的 handleDeleteUser 函式 ---
+    async function handleDeleteUser() {
+      if(!state.deleteTarget) return;
+      try {
+        await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', state.deleteTarget));
+        document.getElementById('modal-delete').classList.add('hidden');
+        state.deleteTarget = null;
+        showMsg("成功", "已成功刪除員工！", "success");
+      } catch(err) { 
+        showMsg("錯誤", "刪除失敗"); 
+      }
     }
 
     // --- User Adding / Editing / Reordering ---
