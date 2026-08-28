@@ -35,7 +35,7 @@
   <div id="loading-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
     <div class="text-xl font-bold flex flex-col items-center gap-4 text-gray-800 dark:text-gray-200">
       <i class="ph ph-spinner animate-spin text-blue-600 text-4xl"></i>
-      <span id="loading-text">載入系統中...</span>
+      <span id="loading-text">資料同步載入中...</span>
     </div>
   </div>
 
@@ -321,7 +321,7 @@
     </div>
   </div>
 
-  <!-- Signature Modal -->
+  <!-- Signature Modal (改回觸控/滑鼠雙軌事件) -->
   <div id="modal-signature" class="fixed inset-0 z-[80] hidden flex flex-col items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm fade-in">
     <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl flex flex-col overflow-hidden shadow-2xl" style="height: 65vh; min-height: 350px;">
       <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
@@ -332,8 +332,8 @@
           <button id="btn-modal-confirm-sig" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow transition-colors">完成</button>
         </div>
       </div>
-      <div class="flex-1 relative bg-white dark:bg-gray-100 touch-none" style="overscroll-behavior: none;">
-        <canvas id="modal-sig-canvas" class="absolute inset-0 w-full h-full cursor-crosshair touch-none block" style="touch-action: none; -webkit-user-select: none; user-select: none;"></canvas>
+      <div class="flex-1 relative bg-white dark:bg-gray-100">
+        <canvas id="modal-sig-canvas" class="absolute inset-0 w-full h-full cursor-crosshair block" style="touch-action: none; -webkit-user-select: none; user-select: none;"></canvas>
       </div>
       <div class="p-2 bg-gray-50 dark:bg-gray-900 text-center text-xs text-gray-500"></div>
     </div>
@@ -498,6 +498,22 @@
       deleteTarget: null
     };
 
+    // --- Loading State Flags (解決非同步網路過慢問題) ---
+    let isUsersLoaded = false;
+    let isSettingsLoaded = false;
+    let loadingTimeout;
+
+    function checkHideLoading() {
+      // 只有當「人員清單」與「全域設定」都成功抓取後，才隱藏 Loading 畫面
+      if (isUsersLoaded && isSettingsLoaded) {
+        clearTimeout(loadingTimeout);
+        document.getElementById('loading-screen').classList.add('hidden');
+        document.getElementById('main-header').classList.remove('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        updateUI(); 
+      }
+    }
+
     // Dates
     const today = new Date();
     const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -539,10 +555,13 @@
 
     // --- Init ---
     async function init() {
-      const loadingTimeout = setTimeout(() => {
+      // 10 秒強制逾時檢查，避免永遠卡在 Loading 畫面
+      loadingTimeout = setTimeout(() => {
         document.getElementById('loading-screen').classList.add('hidden');
         if (!auth.currentUser) {
-            showMsg("警告", "系統連線逾時或權限異常，部分功能可能無法正常運作。");
+            showMsg("警告", "系統連線逾時，請檢查您的網路或 Firebase 權限設定。");
+        } else if (!isSettingsLoaded || !isUsersLoaded) {
+            showMsg("警告", "網路連線速度過慢，資料載入不完全，請重新整理網頁。");
         }
       }, 10000);
 
@@ -636,8 +655,6 @@
       document.getElementById('btn-login-confirm').addEventListener('click', confirmLogin);
       document.getElementById('admin-password').addEventListener('keydown', (e) => e.key === 'Enter' && confirmLogin());
       document.getElementById('btn-msg-ok').addEventListener('click', () => document.getElementById('modal-msg').classList.add('hidden'));
-      
-      // 這裡就是遺失的事件綁定！
       document.getElementById('btn-delete-confirm').addEventListener('click', handleDeleteUser);
       
       document.getElementById('btn-add-user-modal').addEventListener('click', () => openUserForm('add'));
@@ -671,10 +688,6 @@
 
       onAuthStateChanged(auth, (user) => {
         if (user) {
-          clearTimeout(loadingTimeout);
-          document.getElementById('loading-screen').classList.add('hidden');
-          document.getElementById('main-header').classList.remove('hidden');
-          document.getElementById('main-content').classList.remove('hidden');
           fetchUsers();
           setupEvaluationsListener();
           setupSettingsListener(); 
@@ -921,7 +934,7 @@
       });
     }
 
-    // --- Signature Pad Logic ---
+    // --- Signature Pad Logic (Touch & Mouse 回歸高相容版本) ---
     let isDrawing = false;
     let ctx;
     
@@ -947,11 +960,18 @@
       ctx.strokeStyle = '#000000';
       
       if(!canvas.dataset.initialized) {
-        canvas.addEventListener('pointerdown', startDrawing);
-        canvas.addEventListener('pointermove', draw);
-        canvas.addEventListener('pointerup', stopDrawing);
-        canvas.addEventListener('pointerout', stopDrawing);
-        canvas.addEventListener('pointercancel', stopDrawing);
+        // Touch events (加上 passive: false 才能用 preventDefault 阻止畫面捲動)
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing, { passive: false });
+        canvas.addEventListener('touchcancel', stopDrawing, { passive: false });
+        
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
         canvas.dataset.initialized = "true";
       }
     }
@@ -970,16 +990,24 @@
     function getCoords(e) {
       const canvas = document.getElementById('modal-sig-canvas');
       const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / (rect.width || 1) * canvas.offsetWidth;
-      const y = (e.clientY - rect.top) / (rect.height || 1) * canvas.offsetHeight;
+      let clientX, clientY;
+
+      // 判斷是觸控還是滑鼠
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
       return { x, y };
     }
 
     function startDrawing(e) { 
       e.preventDefault(); 
-      if(e.pointerId) {
-        try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
-      }
       const coords = getCoords(e); 
       ctx.beginPath(); 
       ctx.moveTo(coords.x, coords.y); 
@@ -997,9 +1025,6 @@
     function stopDrawing(e) { 
       if (isDrawing) {
         isDrawing = false; 
-        if(e && e.pointerId) {
-          try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
-        }
       }
     }
     
@@ -1032,6 +1057,12 @@
         } else {
           const loadedUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
           state.users = loadedUsers.sort((a, b) => (a.order || 999) - (b.order || 999));
+        }
+        
+        if (!isUsersLoaded) {
+          isUsersLoaded = true;
+          checkHideLoading();
+        } else {
           updateUI();
         }
       }, (err) => console.error(err));
@@ -1063,7 +1094,13 @@
           state.tempOpenStart = null;
           state.tempOpenEnd = null;
         }
-        updateUI(); 
+
+        if (!isSettingsLoaded) {
+          isSettingsLoaded = true;
+          checkHideLoading();
+        } else {
+          updateUI();
+        }
       }, (err) => console.error("Settings Error:", err));
     }
 
@@ -1301,7 +1338,6 @@
       });
     }
 
-    // --- 加入遺失的 handleDeleteUser 函式 ---
     async function handleDeleteUser() {
       if(!state.deleteTarget) return;
       try {
